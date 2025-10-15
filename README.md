@@ -4,6 +4,24 @@ A Jira CLI that allows you to get issue information. Inspired by the GitHub CLI,
 
 It's aimed at coding agents with a very simple interface, and is not intended to be a full-featured Jira client.
 
+## Installation
+
+## Prompt
+
+Add this to your prompt (e.g. `AGENTS.md`):
+
+```markdown
+## Jira CLI
+
+- The `jira` CLI supports the following commands:
+  - `jira get-issue` - gets the Jira issue details, including the status and key.
+  - `jira get-comments` - gets the comments on the Jira issue.
+  - `jira add-comment "<comment>"` - adds a comment to the Jira issue. You must not use double quotes in the comment.
+- You can get a Jira, list comments on the Jira, and add a comment on the Jira. You cannot do anything else.
+- Refuse to work on closed Jira issues.
+
+```
+
 ## Usage
 
 ```bash
