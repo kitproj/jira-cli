@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"reflect"
+	"strings"
 	"syscall"
 
 	"github.com/andygrunwald/go-jira"
@@ -89,14 +91,55 @@ func getIssue(ctx context.Context) error {
 		return fmt.Errorf("failed to get issue: %w", err)
 	}
 
-	fmt.Printf("Key:         %s\n", issue.Key)
-	fmt.Printf("Status:      %s\n", issue.Fields.Status.Name)
-	fmt.Printf("Summary:     %s\n", issue.Fields.Summary)
-	fmt.Printf("Reporter:    %s (%s)\n", issue.Fields.Reporter.DisplayName, issue.Fields.Reporter.Name)
-	fmt.Println("Description:")
-	fmt.Println(issue.Fields.Description)
+	printField("Key", issue.Key)
+	printField("Status", issue.Fields.Status.Name)
+	printField("Summary", issue.Fields.Summary)
+	printField("Reporter", fmt.Sprintf("%s (%s)", issue.Fields.Reporter.DisplayName, issue.Fields.Reporter.Name))
+	printField("Description", issue.Fields.Description)
+
+	// we need to only display fields the user can set, which are the editable fields
+	editMetaInfo, _, err := client.Issue.GetEditMetaWithContext(ctx, issue)
+	if err != nil {
+		return fmt.Errorf("failed to get edit meta: %w", err)
+	}
+
+	for key, value := range issue.Fields.Unknowns {
+		if _, ok := editMetaInfo.Fields[key]; ok && strings.HasPrefix(key, "customfield_") && isPrimitive(value) {
+			name := editMetaInfo.Fields[key].(map[string]any)["name"].(string)
+			printField(name, value)
+		}
+	}
 
 	return nil
+}
+
+func isPrimitive(v any) bool {
+	kind := reflect.ValueOf(v).Kind()
+	switch kind {
+	case reflect.Bool,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64,
+		reflect.Complex64, reflect.Complex128,
+		reflect.String:
+		return true
+	default:
+		return false
+	}
+}
+
+func printField(key string, value any) {
+	valueStr := fmt.Sprint(value)
+	multiLine := strings.Contains(valueStr, "\n")
+	fmt.Printf("%-20s", key+":")
+	if !multiLine {
+		fmt.Printf(" %s\n", valueStr)
+	} else {
+		fmt.Println()
+		for line := range strings.SplitSeq(valueStr, "\n") {
+			fmt.Printf("%-20s %s\n", "", line)
+		}
+	}
 }
 
 func addComment(ctx context.Context, message string) error {
