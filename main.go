@@ -47,7 +47,7 @@ func main() {
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("unknown sub-command\nusage:\n - jira get-issue\n - jira get-recent-comments\n - jira add-comment <comment>")
+		return fmt.Errorf("unknown sub-command\nusage:\n - jira get-issue\n - jira get-comments\n - jira add-comment <comment>")
 	}
 
 	if token == "" || host == "" || issueKey == "" {
