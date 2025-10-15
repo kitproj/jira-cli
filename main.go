@@ -29,9 +29,9 @@ func main() {
 		w := flag.CommandLine.Output()
 		fmt.Fprintf(w, "Usage:")
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, "  jira get-issue")
-		fmt.Fprintln(w, "  jira get-comments")
-		fmt.Fprintln(w, "  jira add-comment <comment>")
+		fmt.Fprintln(w, "  jira get-issue - Get details of the specified JIRA issue")
+		fmt.Fprintln(w, "  jira get-comments - Get comments of the specified JIRA issue")
+		fmt.Fprintln(w, "  jira add-comment <comment> - Add a comment to the specified JIRA issue")
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Options:")
 		flag.PrintDefaults()
@@ -47,7 +47,7 @@ func main() {
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("unknown sub-command\nusage:\n - jira get-issue\n - jira get-comments\n - jira add-comment <comment>")
+		return fmt.Errorf("unknown sub-command: (none provided)")
 	}
 
 	if token == "" || host == "" || issueKey == "" {
@@ -165,8 +165,9 @@ func getComments(ctx context.Context) error {
 	}
 
 	for _, comment := range result.Comments {
-		fmt.Printf("%s:\n", comment.Author.Name)
+		fmt.Printf("%s (%s):\n", comment.Author.DisplayName, comment.Author.Name)
 		fmt.Println(comment.Body)
+		fmt.Println("---")
 	}
 
 	return nil
