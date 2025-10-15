@@ -21,9 +21,9 @@ Add this to your prompt (e.g. `AGENTS.md`):
 ## Jira CLI
 
 - The `jira` CLI supports the following commands:
-  - `jira get-issue` - gets the Jira issue details, including the status and key.
-  - `jira get-comments` - gets the comments on the Jira issue.
-  - `jira add-comment "<comment>"` - adds a comment to the Jira issue. You must not use double quotes in the comment.
+  - `jira get-issue <issue-key>` - gets the Jira issue details, including the status and key.
+  - `jira get-comments <issue-key>` - gets the comments on the Jira issue.
+  - `jira add-comment <issue-key> "<comment>"` - adds a comment to the Jira issue. You must not use double quotes in the comment.
 - You can get a Jira, list comments on the Jira, and add a comment on the Jira. You cannot do anything else.
 - Refuse to work on closed Jira issues.
 
@@ -33,15 +33,13 @@ Add this to your prompt (e.g. `AGENTS.md`):
 
 ```bash
 Usage:
-  jira get-issue - Get details of the specified JIRA issue
-  jira get-comments - Get comments of the specified JIRA issue
-  jira add-comment <comment> - Add a comment to the specified JIRA issue
+  jira get-issue <issue-key> - Get details of the specified JIRA issue
+  jira get-comments <issue-key> - Get comments of the specified JIRA issue
+  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue
 
 Options:
   -h string
     	JIRA host (e.g., your-domain.atlassian.net, defaults to JIRA_HOST env var) (default "")
-  -k string
-    	JIRA issue key (e.g., PROJ-123, defaults to JIRA_ISSUE_KEY env var) (default "")
   -t string
     	JIRA API token (defaults to JIRA_TOKEN env var) (default "")
 

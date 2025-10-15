@@ -24,14 +24,13 @@ func main() {
 
 	flag.StringVar(&host, "h", os.Getenv("JIRA_HOST"), "JIRA host (e.g., your-domain.atlassian.net, defaults to JIRA_HOST env var)")
 	flag.StringVar(&token, "t", os.Getenv("JIRA_TOKEN"), "JIRA API token (defaults to JIRA_TOKEN env var)")
-	flag.StringVar(&issueKey, "k", os.Getenv("JIRA_ISSUE_KEY"), "JIRA issue key (e.g., PROJ-123, defaults to JIRA_ISSUE_KEY env var)")
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
 		fmt.Fprintf(w, "Usage:")
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, "  jira get-issue - Get details of the specified JIRA issue")
-		fmt.Fprintln(w, "  jira get-comments - Get comments of the specified JIRA issue")
-		fmt.Fprintln(w, "  jira add-comment <comment> - Add a comment to the specified JIRA issue")
+		fmt.Fprintln(w, "  jira get-issue <issue-key> - Get details of the specified JIRA issue")
+		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
+		fmt.Fprintln(w, "  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue")
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Options:")
 		flag.PrintDefaults()
@@ -46,18 +45,19 @@ func main() {
 }
 
 func run(ctx context.Context, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("unknown sub-command: (none provided)")
+	if len(args) < 2 {
+		return fmt.Errorf("usage: jira <command> <issue-key> [args...]")
 	}
+
+	// First argument is the command, second is the issue key
+	command := args[0]
+	issueKey = args[1]
 
 	if host == "" {
 		return fmt.Errorf("host is required")
 	}
 	if token == "" {
 		return fmt.Errorf("token is required")
-	}
-	if issueKey == "" {
-		return fmt.Errorf("issue key is required")
 	}
 
 	tp := jira.BearerAuthTransport{Token: token}
@@ -68,18 +68,18 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to create JIRA client: %w", err)
 	}
 
-	switch args[0] {
+	switch command {
 	case "get-issue":
 		return getIssue(ctx)
 	case "add-comment":
-		if len(args) < 2 {
+		if len(args) < 3 {
 			return fmt.Errorf("comment message is required")
 		}
-		return addComment(ctx, args[1])
+		return addComment(ctx, args[2])
 	case "get-comments":
 		return getComments(ctx)
 	default:
-		return fmt.Errorf("unknown sub-command: %s", args[0])
+		return fmt.Errorf("unknown sub-command: %s", command)
 	}
 }
 
