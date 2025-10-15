@@ -1,10 +1,16 @@
-# jira-cli
+# Jira CLI
 
 A Jira CLI that allows you to get issue information. Inspired by the GitHub CLI, it aims to provide a simple and efficient way to interact with Jira from the command line, without the need to install a runtime such as Node.js or Python.
 
 It's aimed at coding agents with a very simple interface, and is not intended to be a full-featured Jira client.
 
 ## Installation
+
+Download the binary for your platform from the release page:
+
+```bash
+sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.5/jira_v0.0.5_linux_arm64
+```
 
 ## Prompt
 

@@ -38,7 +38,7 @@ func main() {
 	}
 	flag.Parse()
 
-	if err := run(ctx, os.Args[1:]); err != nil {
+	if err := run(ctx, flag.Args()); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		flag.Usage()
 		os.Exit(1)
