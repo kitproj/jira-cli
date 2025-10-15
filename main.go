@@ -31,6 +31,7 @@ func main() {
 		fmt.Fprintf(w, "Usage:")
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "  jira get-issue <issue-key> - Get details of the specified JIRA issue")
+		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue")
 		fmt.Fprintln(w)
@@ -73,6 +74,11 @@ func run(ctx context.Context, args []string) error {
 	switch command {
 	case "get-issue":
 		return getIssue(ctx)
+	case "update-issue-status":
+		if len(args) < 3 {
+			return fmt.Errorf("status name is required")
+		}
+		return updateIssueStatus(ctx, args[2])
 	case "add-comment":
 		if len(args) < 3 {
 			return fmt.Errorf("comment message is required")
@@ -140,6 +146,54 @@ func printField(key string, value any) {
 			fmt.Printf("%-20s %s\n", "", line)
 		}
 	}
+}
+
+// updateIssueStatus updates the status of a Jira issue using transitions
+func updateIssueStatus(ctx context.Context, statusName string) error {
+	// First, get the issue to check current status
+	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, nil)
+	if err != nil {
+		return fmt.Errorf("failed to get issue: %w", err)
+	}
+
+	// Check if already in the desired status
+	if issue.Fields.Status.Name == statusName {
+		fmt.Printf("Issue %s is already in status: %s\n", issueKey, statusName)
+		return nil
+	}
+
+	// Get available transitions for this issue
+	transitions, _, err := client.Issue.GetTransitionsWithContext(ctx, issueKey)
+	if err != nil {
+		return fmt.Errorf("failed to get transitions: %w", err)
+	}
+
+	// Find the transition that leads to the desired status
+	var targetTransition *jira.Transition
+	for _, transition := range transitions {
+		if transition.To.Name == statusName {
+			targetTransition = &transition
+			break
+		}
+	}
+
+	if targetTransition == nil {
+		// List available statuses for better error message
+		var availableStatuses []string
+		for _, transition := range transitions {
+			availableStatuses = append(availableStatuses, fmt.Sprintf("%q", transition.To.Name))
+		}
+		return fmt.Errorf("no transition found to status '%s'. Available statuses: %v", statusName, strings.Join(availableStatuses, ", "))
+	}
+
+	// Perform the transition
+	_, err = client.Issue.DoTransition(issueKey, targetTransition.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update issue status: %w", err)
+	}
+
+	fmt.Printf("Successfully updated issue %s to status: %s\n", issueKey, statusName)
+	return nil
 }
 
 func addComment(ctx context.Context, message string) error {

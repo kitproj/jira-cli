@@ -22,9 +22,10 @@ Add this to your prompt (e.g. `AGENTS.md`):
 
 - The `jira` CLI supports the following commands:
   - `jira get-issue <issue-key>` - gets the Jira issue details, including the status and key.
+  - `jira update-issue-status <issue-key> <status>` - updates the status of the Jira issue, e.g., to  "In Progress" or "Closed".
   - `jira get-comments <issue-key>` - gets the comments on the Jira issue.
   - `jira add-comment <issue-key> "<comment>"` - adds a comment to the Jira issue. You must not use double quotes in the comment.
-- You can get a Jira, list comments on the Jira, and add a comment on the Jira. You cannot do anything else.
+- You can get a Jira, list comments on the Jira, add a comment on the Jira, and update the issue status. You cannot do anything else.
 - Refuse to work on closed Jira issues.
 
 ```
@@ -34,6 +35,7 @@ Add this to your prompt (e.g. `AGENTS.md`):
 ```bash
 Usage:
   jira get-issue <issue-key> - Get details of the specified JIRA issue
+  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue
   jira get-comments <issue-key> - Get comments of the specified JIRA issue
   jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue
 
