@@ -1,21 +1,21 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/andygrunwald/go-jira"
 )
 
 var (
 	host     string
 	token    string
 	issueKey string
+	client   *jira.Client
 )
 
 func main() {
@@ -50,8 +50,22 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("unknown sub-command: (none provided)")
 	}
 
-	if token == "" || host == "" || issueKey == "" {
-		return fmt.Errorf("JIRA_TOKEN, JIRA_HOST, and JIRA_ISSUE_KEY must be set")
+	if host == "" {
+		return fmt.Errorf("host is required")
+	}
+	if token == "" {
+		return fmt.Errorf("token is required")
+	}
+	if issueKey == "" {
+		return fmt.Errorf("issue key is required")
+	}
+
+	tp := jira.BearerAuthTransport{Token: token}
+
+	var err error
+	client, err = jira.NewClient(tp.Client(), "https://"+host)
+	if err != nil {
+		return fmt.Errorf("failed to create JIRA client: %w", err)
 	}
 
 	switch args[0] {
@@ -70,101 +84,50 @@ func run(ctx context.Context, args []string) error {
 }
 
 func getIssue(ctx context.Context) error {
-	url := fmt.Sprintf("https://%s/rest/api/2/issue/%s", host, issueKey)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to get issue: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to make request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to get issue: %s", resp.Status)
-	}
-
-	var result issue
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	fmt.Printf("Key:         %s\n", result.Key)
-	fmt.Printf("Status:      %s\n", result.Fields.Status.Name)
-	fmt.Printf("Summary:     %s\n", result.Fields.Summary)
-	fmt.Printf("Reporter:    %s (%s)\n", result.Fields.Reporter.DisplayName, result.Fields.Reporter.Name)
+	fmt.Printf("Key:         %s\n", issue.Key)
+	fmt.Printf("Status:      %s\n", issue.Fields.Status.Name)
+	fmt.Printf("Summary:     %s\n", issue.Fields.Summary)
+	fmt.Printf("Reporter:    %s (%s)\n", issue.Fields.Reporter.DisplayName, issue.Fields.Reporter.Name)
 	fmt.Println("Description:")
-	fmt.Println(result.Fields.Description)
+	fmt.Println(issue.Fields.Description)
 
 	return nil
 }
 
 func addComment(ctx context.Context, message string) error {
-	url := fmt.Sprintf("https://%s/rest/api/2/issue/%s/comment", host, issueKey)
-
-	comment := comment{Body: message}
-
-	data, err := json.Marshal(comment)
-	if err != nil {
-		return fmt.Errorf("failed to marshal comment: %w", err)
+	comment := &jira.Comment{
+		Body: message,
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(data))
+	_, _, err := client.Issue.AddCommentWithContext(ctx, issueKey, comment)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to make request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("failed to add comment: HTTP %d", resp.StatusCode)
+		return fmt.Errorf("failed to add comment: %w", err)
 	}
 
 	return nil
 }
 
 func getComments(ctx context.Context) error {
-	url := fmt.Sprintf("https://%s/rest/api/2/issue/%s/comment", host, issueKey)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	options := &jira.GetQueryOptions{
+		Expand: "comments",
+	}
+
+	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, options)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to get issue with comments: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to make request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("failed to get comments: HTTP %d", resp.StatusCode)
+	if issue.Fields.Comments == nil {
+		fmt.Println("No comments found")
+		return nil
 	}
 
-	var result struct {
-		Comments []comment `json:"comments"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	for _, comment := range result.Comments {
+	for _, comment := range issue.Fields.Comments.Comments {
 		fmt.Printf("%s (%s):\n", comment.Author.DisplayName, comment.Author.Name)
 		fmt.Println(comment.Body)
 		fmt.Println("---")
