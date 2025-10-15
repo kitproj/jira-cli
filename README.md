@@ -10,6 +10,7 @@ Download the binary for your platform from the release page:
 
 ```bash
 sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.5/jira_v0.0.5_linux_arm64
+sudo chmod +x /usr/local/bin/jira
 ```
 
 ## Prompt
