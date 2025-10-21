@@ -286,7 +286,9 @@ func configure(host string) error {
 		return fmt.Errorf("host is required")
 	}
 
-	fmt.Fprintf(os.Stderr, "Enter JIRA API token: ")
+	fmt.Fprintf(os.Stderr, "To create a personal access token, visit: https://%s/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens\n", host)
+	fmt.Fprintf(os.Stderr, "The token will be stored securely in your system's keyring.\n")
+	fmt.Fprintf(os.Stderr, "\nEnter JIRA API token: ")
 	scanner := bufio.NewScanner(os.Stdin)
 	if !scanner.Scan() {
 		if err := scanner.Err(); err != nil {
