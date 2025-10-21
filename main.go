@@ -99,11 +99,11 @@ func run(ctx context.Context, args []string) error {
 func executeCommand(ctx context.Context, fn func(context.Context) error) error {
 	// Load host from config file, or fall back to flag/env var
 	if host == "" {
-		cfg, err := config.LoadConfig()
+		var err error
+		host, err = config.LoadConfig()
 		if err != nil {
 			return err
 		}
-		host = cfg.Host
 	}
 
 	// Load token from keyring, or fall back to env var

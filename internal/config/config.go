@@ -14,13 +14,13 @@ const (
 	configFile  = "config.json"
 )
 
-// Config represents the jira-cli configuration
-type Config struct {
+// config represents the jira-cli configuration
+type config struct {
 	Host string `json:"host"`
 }
 
-// GetConfigPath returns the path to the config file
-func GetConfigPath() (string, error) {
+// getConfigPath returns the path to the config file
+func getConfigPath() (string, error) {
 	configDirPath, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get config directory: %w", err)
@@ -32,7 +32,7 @@ func GetConfigPath() (string, error) {
 
 // SaveConfig saves the host to the config file
 func SaveConfig(host string) error {
-	configPath, err := GetConfigPath()
+	configPath, err := getConfigPath()
 	if err != nil {
 		return err
 	}
@@ -43,8 +43,8 @@ func SaveConfig(host string) error {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	config := Config{Host: host}
-	data, err := json.MarshalIndent(config, "", "  ")
+	cfg := config{Host: host}
+	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
@@ -57,44 +57,31 @@ func SaveConfig(host string) error {
 }
 
 // LoadConfig loads the host from the config file
-func LoadConfig() (*Config, error) {
-	configPath, err := GetConfigPath()
+func LoadConfig() (string, error) {
+	configPath, err := getConfigPath()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("config file not found, please run 'jira configure' first")
-		}
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return "", fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	var cfg config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return "", fmt.Errorf("failed to parse config file: %w", err)
 	}
 
-	return &config, nil
+	return cfg.Host, nil
 }
 
 // SaveToken saves the token to the keyring
 func SaveToken(host, token string) error {
-	if err := keyring.Set(serviceName, host, token); err != nil {
-		return fmt.Errorf("failed to save token to keyring: %w", err)
-	}
-	return nil
+	return keyring.Set(serviceName, host, token)
 }
 
 // LoadToken loads the token from the keyring
 func LoadToken(host string) (string, error) {
-	token, err := keyring.Get(serviceName, host)
-	if err != nil {
-		if err == keyring.ErrNotFound {
-			return "", fmt.Errorf("token not found for host %s, please run 'jira configure' first", host)
-		}
-		return "", fmt.Errorf("failed to get token from keyring: %w", err)
-	}
-	return token, nil
+	return keyring.Get(serviceName, host)
 }
