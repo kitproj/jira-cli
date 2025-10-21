@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/andygrunwald/go-jira"
+	"github.com/kitproj/jira-cli/internal/config"
 )
 
 var (
@@ -30,6 +32,7 @@ func main() {
 		w := flag.CommandLine.Output()
 		fmt.Fprintf(w, "Usage:")
 		fmt.Fprintln(w)
+		fmt.Fprintln(w, "  jira configure <host> - Configure JIRA host and token (reads token from stdin)")
 		fmt.Fprintln(w, "  jira get-issue <issue-key> - Get details of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
@@ -48,13 +51,45 @@ func main() {
 }
 
 func run(ctx context.Context, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: jira <command> [args...]")
+	}
+
+	// First argument is the command
+	command := args[0]
+
+	// Handle configure command separately
+	if command == "configure" {
+		if len(args) < 2 {
+			return fmt.Errorf("usage: jira configure <host>")
+		}
+		return configure(args[1])
+	}
+
+	// For other commands, we need at least 2 args (command + issue-key)
 	if len(args) < 2 {
 		return fmt.Errorf("usage: jira <command> <issue-key> [args...]")
 	}
 
-	// First argument is the command, second is the issue key
-	command := args[0]
 	issueKey = args[1]
+
+	// Load host from config file, or fall back to flag/env var
+	if host == "" {
+		cfg, err := config.LoadConfig()
+		if err != nil {
+			return err
+		}
+		host = cfg.Host
+	}
+
+	// Load token from keyring, or fall back to flag/env var
+	if token == "" {
+		var err error
+		token, err = config.LoadToken(host)
+		if err != nil {
+			return err
+		}
+	}
 
 	if host == "" {
 		return fmt.Errorf("host is required")
@@ -230,5 +265,39 @@ func getComments(ctx context.Context) error {
 		fmt.Println("---")
 	}
 
+	return nil
+}
+
+// configure reads the token from stdin and saves it to the keyring
+func configure(host string) error {
+	if host == "" {
+		return fmt.Errorf("host is required")
+	}
+
+	fmt.Fprintf(os.Stderr, "Enter JIRA API token: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return fmt.Errorf("failed to read token: %w", err)
+		}
+		return fmt.Errorf("no token provided")
+	}
+
+	token := scanner.Text()
+	if token == "" {
+		return fmt.Errorf("token cannot be empty")
+	}
+
+	// Save host to config file
+	if err := config.SaveConfig(host); err != nil {
+		return err
+	}
+
+	// Save token to keyring
+	if err := config.SaveToken(host, token); err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "Configuration saved successfully for host: %s\n", host)
 	return nil
 }
