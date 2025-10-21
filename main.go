@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/kitproj/jira-cli/internal/config"
+	"golang.org/x/term"
 )
 
 var (
@@ -289,15 +289,15 @@ func configure(host string) error {
 	fmt.Fprintf(os.Stderr, "To create a personal access token, visit: https://%s/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens\n", host)
 	fmt.Fprintf(os.Stderr, "The token will be stored securely in your system's keyring.\n")
 	fmt.Fprintf(os.Stderr, "\nEnter JIRA API token: ")
-	scanner := bufio.NewScanner(os.Stdin)
-	if !scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			return fmt.Errorf("failed to read token: %w", err)
-		}
-		return fmt.Errorf("no token provided")
+
+	// Read password with hidden input
+	tokenBytes, err := term.ReadPassword(int(syscall.Stdin))
+	fmt.Fprintln(os.Stderr) // Print newline after hidden input
+	if err != nil {
+		return fmt.Errorf("failed to read token: %w", err)
 	}
 
-	token := scanner.Text()
+	token := string(tokenBytes)
 	if token == "" {
 		return fmt.Errorf("token cannot be empty")
 	}
