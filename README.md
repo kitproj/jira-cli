@@ -60,8 +60,4 @@ Usage:
   jira get-comments <issue-key> - Get comments of the specified JIRA issue
   jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue
 
-Options:
-  -h string
-    	JIRA host (e.g., your-domain.atlassian.net, defaults to JIRA_HOST env var)
-
 ```

@@ -26,7 +26,6 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	flag.StringVar(&host, "h", os.Getenv("JIRA_HOST"), "JIRA host (e.g., your-domain.atlassian.net, defaults to JIRA_HOST env var)")
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
 		fmt.Fprintf(w, "Usage:")
@@ -99,12 +98,13 @@ func run(ctx context.Context, args []string) error {
 }
 
 func executeCommand(ctx context.Context, fn func(context.Context) error) error {
-	// Load host from config file, or fall back to flag/env var
+	// Load host from config file, or fall back to env var
 	if host == "" {
 		var err error
 		host, err = config.LoadConfig()
 		if err != nil {
-			return err
+			// Fall back to environment variable
+			host = os.Getenv("JIRA_HOST")
 		}
 	}
 
