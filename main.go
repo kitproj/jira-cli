@@ -27,7 +27,6 @@ func main() {
 	defer cancel()
 
 	flag.StringVar(&host, "h", os.Getenv("JIRA_HOST"), "JIRA host (e.g., your-domain.atlassian.net, defaults to JIRA_HOST env var)")
-	flag.StringVar(&token, "t", os.Getenv("JIRA_TOKEN"), "JIRA API token (defaults to JIRA_TOKEN env var)")
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
 		fmt.Fprintf(w, "Usage:")
@@ -58,21 +57,46 @@ func run(ctx context.Context, args []string) error {
 	// First argument is the command
 	command := args[0]
 
-	// Handle configure command separately
-	if command == "configure" {
+	switch command {
+	case "configure":
 		if len(args) < 2 {
 			return fmt.Errorf("usage: jira configure <host>")
 		}
 		return configure(args[1])
+	case "get-issue":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: jira <command> <issue-key> [args...]")
+		}
+		issueKey = args[1]
+		return executeCommand(ctx, getIssue)
+	case "update-issue-status":
+		if len(args) < 3 {
+			return fmt.Errorf("usage: jira update-issue-status <issue-key> <status>")
+		}
+		issueKey = args[1]
+		return executeCommand(ctx, func(ctx context.Context) error {
+			return updateIssueStatus(ctx, args[2])
+		})
+	case "add-comment":
+		if len(args) < 3 {
+			return fmt.Errorf("usage: jira add-comment <issue-key> <comment>")
+		}
+		issueKey = args[1]
+		return executeCommand(ctx, func(ctx context.Context) error {
+			return addComment(ctx, args[2])
+		})
+	case "get-comments":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: jira <command> <issue-key> [args...]")
+		}
+		issueKey = args[1]
+		return executeCommand(ctx, getComments)
+	default:
+		return fmt.Errorf("unknown sub-command: %s", command)
 	}
+}
 
-	// For other commands, we need at least 2 args (command + issue-key)
-	if len(args) < 2 {
-		return fmt.Errorf("usage: jira <command> <issue-key> [args...]")
-	}
-
-	issueKey = args[1]
-
+func executeCommand(ctx context.Context, fn func(context.Context) error) error {
 	// Load host from config file, or fall back to flag/env var
 	if host == "" {
 		cfg, err := config.LoadConfig()
@@ -82,7 +106,10 @@ func run(ctx context.Context, args []string) error {
 		host = cfg.Host
 	}
 
-	// Load token from keyring, or fall back to flag/env var
+	// Load token from keyring, or fall back to env var
+	if token == "" {
+		token = os.Getenv("JIRA_TOKEN")
+	}
 	if token == "" {
 		var err error
 		token, err = config.LoadToken(host)
@@ -106,24 +133,7 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to create JIRA client: %w", err)
 	}
 
-	switch command {
-	case "get-issue":
-		return getIssue(ctx)
-	case "update-issue-status":
-		if len(args) < 3 {
-			return fmt.Errorf("status name is required")
-		}
-		return updateIssueStatus(ctx, args[2])
-	case "add-comment":
-		if len(args) < 3 {
-			return fmt.Errorf("comment message is required")
-		}
-		return addComment(ctx, args[2])
-	case "get-comments":
-		return getComments(ctx)
-	default:
-		return fmt.Errorf("unknown sub-command: %s", command)
-	}
+	return fn(ctx)
 }
 
 func getIssue(ctx context.Context) error {

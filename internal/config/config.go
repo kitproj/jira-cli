@@ -11,7 +11,6 @@ import (
 
 const (
 	serviceName = "jira-cli"
-	configDir   = ".config/jira-cli"
 	configFile  = "config.json"
 )
 
@@ -22,12 +21,12 @@ type Config struct {
 
 // GetConfigPath returns the path to the config file
 func GetConfigPath() (string, error) {
-	homeDir, err := os.UserHomeDir()
+	configDirPath, err := os.UserConfigDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
+		return "", fmt.Errorf("failed to get config directory: %w", err)
 	}
 
-	configPath := filepath.Join(homeDir, configDir, configFile)
+	configPath := filepath.Join(configDirPath, "jira-cli", configFile)
 	return configPath, nil
 }
 

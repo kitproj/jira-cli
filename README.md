@@ -48,7 +48,7 @@ The `jira` CLI can be configured in two ways:
    export JIRA_HOST=your-domain.atlassian.net
    export JIRA_TOKEN=your-api-token
    ```
-   Note: Using environment variables is less secure on multi-user systems as the token is visible in the process list.
+   Note: The JIRA_TOKEN environment variable is still supported for backward compatibility, but using the keyring (via `jira configure`) is more secure on multi-user systems.
 
 ### Commands
 
@@ -63,7 +63,5 @@ Usage:
 Options:
   -h string
     	JIRA host (e.g., your-domain.atlassian.net, defaults to JIRA_HOST env var)
-  -t string
-    	JIRA API token (defaults to JIRA_TOKEN env var)
 
 ```
