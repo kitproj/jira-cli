@@ -74,16 +74,18 @@ func run(ctx context.Context, args []string) error {
 			return fmt.Errorf("usage: jira update-issue-status <issue-key> <status>")
 		}
 		issueKey = args[1]
+		statusName := args[2]
 		return executeCommand(ctx, func(ctx context.Context) error {
-			return updateIssueStatus(ctx, args[2])
+			return updateIssueStatus(ctx, statusName)
 		})
 	case "add-comment":
 		if len(args) < 3 {
 			return fmt.Errorf("usage: jira add-comment <issue-key> <comment>")
 		}
 		issueKey = args[1]
+		message := args[2]
 		return executeCommand(ctx, func(ctx context.Context) error {
-			return addComment(ctx, args[2])
+			return addComment(ctx, message)
 		})
 	case "get-comments":
 		if len(args) < 2 {
