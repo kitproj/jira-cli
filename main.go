@@ -11,6 +11,8 @@ import (
 	"syscall"
 
 	"github.com/andygrunwald/go-jira"
+	"github.com/kitproj/jira-cli/internal/config"
+	"golang.org/x/term"
 )
 
 var (
@@ -24,12 +26,11 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	flag.StringVar(&host, "h", os.Getenv("JIRA_HOST"), "JIRA host (e.g., your-domain.atlassian.net, defaults to JIRA_HOST env var)")
-	flag.StringVar(&token, "t", os.Getenv("JIRA_TOKEN"), "JIRA API token (defaults to JIRA_TOKEN env var)")
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
 		fmt.Fprintf(w, "Usage:")
 		fmt.Fprintln(w)
+		fmt.Fprintln(w, "  jira configure <host> - Configure JIRA host and token (reads token from stdin)")
 		fmt.Fprintln(w, "  jira get-issue <issue-key> - Get details of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
@@ -48,13 +49,76 @@ func main() {
 }
 
 func run(ctx context.Context, args []string) error {
-	if len(args) < 2 {
-		return fmt.Errorf("usage: jira <command> <issue-key> [args...]")
+	if len(args) < 1 {
+		return fmt.Errorf("usage: jira <command> [args...]")
 	}
 
-	// First argument is the command, second is the issue key
+	// First argument is the command
 	command := args[0]
-	issueKey = args[1]
+
+	switch command {
+	case "configure":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: jira configure <host>")
+		}
+		return configure(args[1])
+	case "get-issue":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: jira <command> <issue-key> [args...]")
+		}
+		issueKey = args[1]
+		return executeCommand(ctx, getIssue)
+	case "update-issue-status":
+		if len(args) < 3 {
+			return fmt.Errorf("usage: jira update-issue-status <issue-key> <status>")
+		}
+		issueKey = args[1]
+		statusName := args[2]
+		return executeCommand(ctx, func(ctx context.Context) error {
+			return updateIssueStatus(ctx, statusName)
+		})
+	case "add-comment":
+		if len(args) < 3 {
+			return fmt.Errorf("usage: jira add-comment <issue-key> <comment>")
+		}
+		issueKey = args[1]
+		message := args[2]
+		return executeCommand(ctx, func(ctx context.Context) error {
+			return addComment(ctx, message)
+		})
+	case "get-comments":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: jira <command> <issue-key> [args...]")
+		}
+		issueKey = args[1]
+		return executeCommand(ctx, getComments)
+	default:
+		return fmt.Errorf("unknown sub-command: %s", command)
+	}
+}
+
+func executeCommand(ctx context.Context, fn func(context.Context) error) error {
+	// Load host from config file, or fall back to env var
+	if host == "" {
+		var err error
+		host, err = config.LoadConfig()
+		if err != nil {
+			// Fall back to environment variable
+			host = os.Getenv("JIRA_HOST")
+		}
+	}
+
+	// Load token from keyring, or fall back to env var
+	if token == "" {
+		token = os.Getenv("JIRA_TOKEN")
+	}
+	if token == "" {
+		var err error
+		token, err = config.LoadToken(host)
+		if err != nil {
+			return err
+		}
+	}
 
 	if host == "" {
 		return fmt.Errorf("host is required")
@@ -71,24 +135,7 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to create JIRA client: %w", err)
 	}
 
-	switch command {
-	case "get-issue":
-		return getIssue(ctx)
-	case "update-issue-status":
-		if len(args) < 3 {
-			return fmt.Errorf("status name is required")
-		}
-		return updateIssueStatus(ctx, args[2])
-	case "add-comment":
-		if len(args) < 3 {
-			return fmt.Errorf("comment message is required")
-		}
-		return addComment(ctx, args[2])
-	case "get-comments":
-		return getComments(ctx)
-	default:
-		return fmt.Errorf("unknown sub-command: %s", command)
-	}
+	return fn(ctx)
 }
 
 func getIssue(ctx context.Context) error {
@@ -230,5 +277,41 @@ func getComments(ctx context.Context) error {
 		fmt.Println("---")
 	}
 
+	return nil
+}
+
+// configure reads the token from stdin and saves it to the keyring
+func configure(host string) error {
+	if host == "" {
+		return fmt.Errorf("host is required")
+	}
+
+	fmt.Fprintf(os.Stderr, "To create a personal access token, visit: https://%s/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens\n", host)
+	fmt.Fprintf(os.Stderr, "The token will be stored securely in your system's keyring.\n")
+	fmt.Fprintf(os.Stderr, "\nEnter JIRA API token: ")
+
+	// Read password with hidden input
+	tokenBytes, err := term.ReadPassword(int(syscall.Stdin))
+	fmt.Fprintln(os.Stderr) // Print newline after hidden input
+	if err != nil {
+		return fmt.Errorf("failed to read token: %w", err)
+	}
+
+	token := string(tokenBytes)
+	if token == "" {
+		return fmt.Errorf("token cannot be empty")
+	}
+
+	// Save host to config file
+	if err := config.SaveConfig(host); err != nil {
+		return err
+	}
+
+	// Save token to keyring
+	if err := config.SaveToken(host, token); err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "Configuration saved successfully for host: %s\n", host)
 	return nil
 }
