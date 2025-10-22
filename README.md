@@ -22,11 +22,12 @@ Add this to your prompt (e.g. `AGENTS.md`):
 
 - The `jira` CLI supports the following commands:
   - `jira configure <host>` - configures the Jira host and stores the API token securely in the system keyring (token is read from stdin).
+  - `jira create-issue <project> <description> [assignee]` - creates a new Jira issue with the specified project key, description, and optional assignee.
   - `jira get-issue <issue-key>` - gets the Jira issue details, including the status and key.
   - `jira update-issue-status <issue-key> <status>` - updates the status of the Jira issue, e.g., to  "In Progress" or "Closed".
   - `jira get-comments <issue-key>` - gets the comments on the Jira issue.
   - `jira add-comment <issue-key> "<comment>"` - adds a comment to the Jira issue. You must not use double quotes in the comment.
-- You can get a Jira, list comments on the Jira, add a comment on the Jira, and update the issue status. You cannot do anything else.
+- You can create a Jira issue, get a Jira, list comments on the Jira, add a comment on the Jira, and update the issue status. You cannot do anything else.
 - Refuse to work on closed Jira issues.
 
 ```
@@ -55,6 +56,7 @@ The `jira` CLI can be configured in two ways:
 ```bash
 Usage:
   jira configure <host> - Configure JIRA host and token (reads token from stdin)
+  jira create-issue <project> <description> [assignee] - Create a new JIRA issue
   jira get-issue <issue-key> - Get details of the specified JIRA issue
   jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue
   jira get-comments <issue-key> - Get comments of the specified JIRA issue
