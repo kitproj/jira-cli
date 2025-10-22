@@ -31,6 +31,7 @@ func main() {
 		fmt.Fprintf(w, "Usage:")
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "  jira configure <host> - Configure JIRA host and token (reads token from stdin)")
+		fmt.Fprintln(w, "  jira create-issue <project> <description> [assignee] - Create a new JIRA issue")
 		fmt.Fprintln(w, "  jira get-issue <issue-key> - Get details of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
@@ -62,6 +63,19 @@ func run(ctx context.Context, args []string) error {
 			return fmt.Errorf("usage: jira configure <host>")
 		}
 		return configure(args[1])
+	case "create-issue":
+		if len(args) < 3 {
+			return fmt.Errorf("usage: jira create-issue <project> <description> [assignee]")
+		}
+		project := args[1]
+		description := args[2]
+		var assignee string
+		if len(args) >= 4 {
+			assignee = args[3]
+		}
+		return executeCommand(ctx, func(ctx context.Context) error {
+			return createIssue(ctx, project, description, assignee)
+		})
 	case "get-issue":
 		if len(args) < 2 {
 			return fmt.Errorf("usage: jira <command> <issue-key> [args...]")
@@ -277,6 +291,39 @@ func getComments(ctx context.Context) error {
 		fmt.Println("---")
 	}
 
+	return nil
+}
+
+// createIssue creates a new JIRA issue with the specified project, description, and optional assignee
+func createIssue(ctx context.Context, projectKey, description, assignee string) error {
+	// Create a new issue with the Task issue type (most common default)
+	issue := &jira.Issue{
+		Fields: &jira.IssueFields{
+			Project: jira.Project{
+				Key: projectKey,
+			},
+			Summary:     description,
+			Description: description,
+			Type: jira.IssueType{
+				Name: "Task",
+			},
+		},
+	}
+
+	// Add assignee if provided
+	if assignee != "" {
+		issue.Fields.Assignee = &jira.User{
+			Name: assignee,
+		}
+	}
+
+	// Create the issue
+	createdIssue, _, err := client.Issue.Create(issue)
+	if err != nil {
+		return fmt.Errorf("failed to create issue: %w", err)
+	}
+
+	fmt.Printf("Successfully created issue: %s\n", createdIssue.Key)
 	return nil
 }
 
