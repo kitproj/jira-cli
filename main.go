@@ -12,6 +12,8 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/kitproj/jira-cli/internal/config"
+	"github.com/kitproj/jira-cli/internal/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"golang.org/x/term"
 )
 
@@ -36,6 +38,7 @@ func main() {
 		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue")
+		fmt.Fprintln(w, "  jira mcp-server - Start MCP server (stdio transport)")
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Options:")
 		flag.PrintDefaults()
@@ -106,6 +109,8 @@ func run(ctx context.Context, args []string) error {
 		}
 		issueKey = args[1]
 		return executeCommand(ctx, getComments)
+	case "mcp-server":
+		return startMCPServer()
 	default:
 		return fmt.Errorf("unknown sub-command: %s", command)
 	}
@@ -360,5 +365,14 @@ func configure(host string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Configuration saved successfully for host: %s\n", host)
+	return nil
+}
+
+// startMCPServer starts the MCP server using stdio transport
+func startMCPServer() error {
+	mcpServer := mcp.CreateServer()
+	if err := server.ServeStdio(mcpServer); err != nil {
+		return fmt.Errorf("MCP server error: %w", err)
+	}
 	return nil
 }
