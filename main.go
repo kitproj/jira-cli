@@ -374,7 +374,7 @@ func listIssues(ctx context.Context) error {
 	// Search for issues using JQL
 	issues, _, err := client.Issue.SearchWithContext(ctx, jql, &jira.SearchOptions{
 		MaxResults: 50,
-		Fields:     []string{"key", "summary", "status", "assignee"},
+		Fields:     []string{"key", "summary", "status"},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to search issues: %w", err)

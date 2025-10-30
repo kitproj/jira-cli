@@ -5,6 +5,7 @@ go 1.24.4
 require (
 	github.com/andygrunwald/go-jira v1.17.0
 	github.com/zalando/go-keyring v0.2.6
+	golang.org/x/term v0.36.0
 )
 
 require (
@@ -17,5 +18,4 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/trivago/tgo v1.0.7 // indirect
 	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/term v0.36.0 // indirect
 )
