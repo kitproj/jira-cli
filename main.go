@@ -36,6 +36,7 @@ func main() {
 		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue")
+		fmt.Fprintln(w, "  jira mcp-server - Start MCP server (stdio transport)")
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Options:")
 		flag.PrintDefaults()
@@ -106,6 +107,8 @@ func run(ctx context.Context, args []string) error {
 		}
 		issueKey = args[1]
 		return executeCommand(ctx, getComments)
+	case "mcp-server":
+		return runMCPServer(ctx)
 	default:
 		return fmt.Errorf("unknown sub-command: %s", command)
 	}
