@@ -27,6 +27,7 @@ Add this to your prompt (e.g. `AGENTS.md`):
   - `jira update-issue-status <issue-key> <status>` - updates the status of the Jira issue, e.g., to  "In Progress" or "Closed".
   - `jira get-comments <issue-key>` - gets the comments on the Jira issue.
   - `jira add-comment <issue-key> "<comment>"` - adds a comment to the Jira issue. You must not use double quotes in the comment.
+  - `jira mcp-server` - starts an MCP server that exposes JIRA operations as tools for AI assistants.
 - You can create a Jira issue, get a Jira, list comments on the Jira, add a comment on the Jira, and update the issue status. You cannot do anything else.
 - Refuse to work on closed Jira issues.
 
@@ -61,8 +62,32 @@ Usage:
   jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue
   jira get-comments <issue-key> - Get comments of the specified JIRA issue
   jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue
+  jira mcp-server - Start MCP server (stdio transport)
 
 ```
+
+### MCP Server
+
+The `jira mcp-server` command starts a Model Context Protocol (MCP) server that exposes JIRA operations as tools for AI assistants and other MCP clients.
+
+**Available MCP Tools:**
+- `get_issue` - Get details of a JIRA issue
+- `update_issue_status` - Update the status of a JIRA issue
+- `add_comment` - Add a comment to a JIRA issue
+- `get_comments` - Get comments on a JIRA issue
+- `create_issue` - Create a new JIRA issue
+
+The MCP server uses the stdio transport and communicates using the JSON-RPC protocol. Configure your MCP client to launch the server with:
+
+```json
+{
+  "command": "jira",
+  "args": ["mcp-server"]
+}
+```
+
+**Note:** The MCP server requires that JIRA be configured first using `jira configure <host>`.
+
 
 ## Git Hook Integration
 
