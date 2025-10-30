@@ -368,8 +368,8 @@ func configure(host string) error {
 
 // listIssues lists issues assigned to the current user
 func listIssues(ctx context.Context) error {
-	// JQL to find issues assigned to the current user
-	jql := "assignee = currentUser() ORDER BY updated DESC"
+	// JQL to find issues assigned to the current user, excluding closed issues
+	jql := "assignee = currentUser() AND resolution = Unresolved ORDER BY updated DESC"
 
 	// Search for issues using JQL
 	issues, _, err := client.Issue.SearchWithContext(ctx, jql, &jira.SearchOptions{
