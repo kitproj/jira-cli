@@ -33,6 +33,7 @@ func main() {
 		fmt.Fprintln(w, "  jira configure <host> - Configure JIRA host and token (reads token from stdin)")
 		fmt.Fprintln(w, "  jira create-issue <project> <description> [assignee] - Create a new JIRA issue")
 		fmt.Fprintln(w, "  jira get-issue <issue-key> - Get details of the specified JIRA issue")
+		fmt.Fprintln(w, "  jira list-issues - List issues assigned to the current user")
 		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue")
@@ -106,6 +107,8 @@ func run(ctx context.Context, args []string) error {
 		}
 		issueKey = args[1]
 		return executeCommand(ctx, getComments)
+	case "list-issues":
+		return executeCommand(ctx, listIssues)
 	default:
 		return fmt.Errorf("unknown sub-command: %s", command)
 	}
@@ -360,5 +363,32 @@ func configure(host string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Configuration saved successfully for host: %s\n", host)
+	return nil
+}
+
+// listIssues lists issues assigned to the current user
+func listIssues(ctx context.Context) error {
+	// JQL to find issues assigned to the current user
+	jql := "assignee = currentUser() ORDER BY updated DESC"
+
+	// Search for issues using JQL
+	issues, _, err := client.Issue.SearchWithContext(ctx, jql, &jira.SearchOptions{
+		MaxResults: 50,
+		Fields:     []string{"key", "summary", "status", "assignee"},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to search issues: %w", err)
+	}
+
+	if len(issues) == 0 {
+		fmt.Println("No issues assigned to you")
+		return nil
+	}
+
+	fmt.Printf("Found %d issue(s):\n\n", len(issues))
+	for _, issue := range issues {
+		fmt.Printf("%-15s %-20s %s\n", issue.Key, issue.Fields.Status.Name, issue.Fields.Summary)
+	}
+
 	return nil
 }
