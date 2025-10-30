@@ -52,7 +52,9 @@ The `jira` CLI can be configured in two ways:
    ```
    Note: The JIRA_TOKEN environment variable is still supported for backward compatibility, but using the keyring (via `jira configure`) is more secure on multi-user systems.
 
-### Commands
+## Usage
+
+### Direct CLI Usage
 
 ```bash
 Usage:
@@ -62,31 +64,47 @@ Usage:
   jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue
   jira get-comments <issue-key> - Get comments of the specified JIRA issue
   jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue
-  jira mcp-server - Start MCP server (stdio transport)
-
+  jira mcp-server - Start MCP server (Model Context Protocol)
 ```
 
-### MCP Server
+**Example:**
+```bash
+jira get-issue PROJ-123
+```
 
-The `jira mcp-server` command starts a Model Context Protocol (MCP) server that exposes JIRA operations as tools for AI assistants and other MCP clients.
+### MCP Server Mode
 
-**Available MCP Tools:**
-- `get_issue` - Get details of a JIRA issue
-- `update_issue_status` - Update the status of a JIRA issue
+The MCP (Model Context Protocol) server allows AI assistants and other tools to interact with JIRA through a standardized JSON-RPC protocol over stdio. This enables seamless integration with AI coding assistants and other automation tools.
+
+**Setup:**
+
+1. First, configure your JIRA host and token (stored securely in the system keyring):
+   ```bash
+   echo "your-api-token" | jira configure your-domain.atlassian.net
+   ```
+
+2. Add the MCP server configuration to your MCP client:
+   ```json
+   {
+     "mcpServers": {
+       "jira": {
+         "command": "jira",
+         "args": ["mcp-server"]
+       }
+     }
+   }
+   ```
+
+The server exposes the following tools:
+- `get_issue` - Get details of a JIRA issue (e.g., status, summary, reporter, description)
+- `update_issue_status` - Update the status of a JIRA issue using transitions
 - `add_comment` - Add a comment to a JIRA issue
-- `get_comments` - Get comments on a JIRA issue
-- `create_issue` - Create a new JIRA issue
+- `get_comments` - Get all comments on a JIRA issue
+- `create_issue` - Create a new JIRA issue with specified project, description, and optional assignee
 
-The MCP server uses the stdio transport and communicates using the JSON-RPC protocol. Configure your MCP client to launch the server with:
+**Example usage from an AI assistant:**
+> "Get the details of issue PROJ-123 and add a comment saying the work is in progress."
 
-```json
-{
-  "command": "jira",
-  "args": ["mcp-server"]
-}
-```
-
-**Note:** The MCP server requires that JIRA be configured first using `jira configure <host>`.
 
 
 ## Git Hook Integration
