@@ -374,7 +374,7 @@ func listIssues(ctx context.Context) error {
 	// Search for issues using JQL
 	issues, _, err := client.Issue.SearchWithContext(ctx, jql, &jira.SearchOptions{
 		MaxResults: 50,
-		Fields:     []string{"key", "summary", "status"},
+		Fields:     []string{"key", "summary", "status", "sprint", "customfield_10020"},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to search issues: %w", err)
@@ -387,7 +387,24 @@ func listIssues(ctx context.Context) error {
 
 	fmt.Printf("Found %d issue(s):\n\n", len(issues))
 	for _, issue := range issues {
-		fmt.Printf("%-15s %-20s %s\n", issue.Key, issue.Fields.Status.Name, issue.Fields.Summary)
+		sprintName := "-"
+		
+		// Try to get sprint from the Sprint field first
+		if issue.Fields.Sprint != nil && issue.Fields.Sprint.Name != "" {
+			sprintName = issue.Fields.Sprint.Name
+		} else if sprintField, ok := issue.Fields.Unknowns["customfield_10020"]; ok {
+			// Sprint might be in custom field (commonly customfield_10020)
+			// It can be an array of sprints or a single sprint
+			if sprints, ok := sprintField.([]interface{}); ok && len(sprints) > 0 {
+				if sprintMap, ok := sprints[len(sprints)-1].(map[string]interface{}); ok {
+					if name, ok := sprintMap["name"].(string); ok {
+						sprintName = name
+					}
+				}
+			}
+		}
+		
+		fmt.Printf("%-15s %-20s %-25s %s\n", issue.Key, issue.Fields.Status.Name, sprintName, issue.Fields.Summary)
 	}
 
 	return nil
