@@ -377,7 +377,7 @@ func listIssues(ctx context.Context) error {
 	// Search for issues using JQL
 	issues, _, err := client.Issue.SearchWithContext(ctx, jql, &jira.SearchOptions{
 		MaxResults: 50,
-		Fields:     []string{"key", "summary", "status", "sprint"},
+		Fields:     []string{"key", "summary", "status"},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to search issues: %w", err)
@@ -388,16 +388,14 @@ func listIssues(ctx context.Context) error {
 		return nil
 	}
 
-	fmt.Printf("Found %d issue(s):\n\n", len(issues))
+	fmt.Printf("Found %d issue(s)", len(issues))
+	if len(issues) >= 50 {
+		fmt.Printf(" (showing first 50 only)")
+	}
+	fmt.Printf(":\n\n")
+
 	for _, issue := range issues {
-		sprintName := "-"
-
-		// Get sprint from the Sprint field
-		if issue.Fields.Sprint != nil && issue.Fields.Sprint.Name != "" {
-			sprintName = issue.Fields.Sprint.Name
-		}
-
-		fmt.Printf("%-15s %-20s %-25s %s\n", issue.Key, issue.Fields.Status.Name, sprintName, issue.Fields.Summary)
+		fmt.Printf("%-15s %-20s %s\n", issue.Key, issue.Fields.Status.Name, issue.Fields.Summary)
 	}
 
 	return nil
