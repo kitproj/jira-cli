@@ -1,37 +1,18 @@
-# Jira CLI
+# Jira CLI & MCP Server
 
-A Jira CLI that allows you to get issue information. Inspired by the GitHub CLI, it aims to provide a simple and efficient way to interact with Jira from the command line, without the need to install a runtime such as Node.js or Python.
+A Jira CLI and MCP server that allows you and your coding agents to get issue information from Jira. Inspired by the GitHub CLI, it aims to provide a simple and efficient way to humans and agents interact with Jira from the command line.
 
-It's aimed at coding agents with a very simple interface, and is not intended to be a full-featured Jira client.
+Being both a CLI and an MCP server means you get the best of both worlds. Agents can be directed to perform specific commands (e.g. `Put the Jira "In progress" by running jira update-issue-states ABC-123 "In Progress"`, or knowing they will do it correctly.
+
+Like `jq`, it is a single tiny (10Mb) binary, without the overhead of installing a Node runtime, and without the need to put your Jira token in plain text file (it uses the system key-ring).
 
 ## Installation
 
-Download the binary for your platform from the release page:
+Download the binary for your platform from the release page, e.g. for linux/arm64:
 
 ```bash
 sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.9/jira_v0.0.9_linux_arm64
 sudo chmod +x /usr/local/bin/jira
-```
-
-## Prompt
-
-Add this to your prompt (e.g. `AGENTS.md`):
-
-```markdown
-## Jira CLI
-
-- The `jira` CLI supports the following commands:
-  - `jira configure <host>` - configures the Jira host and stores the API token securely in the system keyring (token is read from stdin).
-  - `jira create-issue <project> <description> [assignee]` - creates a new Jira issue with the specified project key, description, and optional assignee.
-  - `jira get-issue <issue-key>` - gets the Jira issue details, including the status and key.
-  - `jira list-issues` - lists issues assigned to the current user.
-  - `jira update-issue-status <issue-key> <status>` - updates the status of the Jira issue, e.g., to  "In Progress" or "Closed".
-  - `jira get-comments <issue-key>` - gets the comments on the Jira issue.
-  - `jira add-comment <issue-key> "<comment>"` - adds a comment to the Jira issue. You must not use double quotes in the comment.
-  - `jira mcp-server` - starts an MCP server that exposes JIRA operations as tools for AI assistants.
-- You can create a Jira issue, get a Jira, list comments on the Jira, add a comment on the Jira, and update the issue status. You cannot do anything else.
-- Refuse to work on closed Jira issues.
-
 ```
 
 ## Usage
