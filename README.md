@@ -8,16 +8,47 @@ Like `jq`, it is a single tiny (10Mb) binary, without the overhead of installing
 
 ## Installation
 
-Download the binary for your platform from the release page, e.g. for linux/arm64:
+### Supported Platforms
+
+Binaries are available for:
+- **Linux**: amd64, arm64
+- **macOS**: amd64 (Intel), arm64 (Apple Silicon)
+- **Windows**: amd64
+
+### Download and Install
+
+Download the binary for your platform from the [release page](https://github.com/kitproj/jira-cli/releases), e.g. for linux/arm64:
 
 ```bash
 sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.9/jira_v0.0.9_linux_arm64
 sudo chmod +x /usr/local/bin/jira
 ```
 
+For macOS (Apple Silicon):
+```bash
+sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.9/jira_v0.0.9_darwin_arm64
+sudo chmod +x /usr/local/bin/jira
+```
+
+Verify the installation:
+```bash
+jira -h
+```
+
 ## Usage
 
 ### Configuration
+
+#### Getting a Jira API Token
+
+Before configuring, you'll need to create a Jira API token:
+
+1. Visit your Jira instance: `https://your-domain.atlassian.net/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens`
+2. Click "Create API token"
+3. Give it a label (e.g., "jira-cli")
+4. Copy the generated token (you won't be able to see it again)
+
+#### Configure the CLI
 
 The `jira` CLI can be configured in two ways:
 
@@ -50,14 +81,52 @@ Usage:
   jira mcp-server - Start MCP server (Model Context Protocol)
 ```
 
-**Example:**
+#### Examples
+
+**Get issue details:**
 ```bash
 jira get-issue PROJ-123
+```
+
+**List your current issues:**
+```bash
+jira list-issues
+# Output:
+# Found 3 issue(s) in the last 14 days:
+# 
+# PROJ-123        In Progress          Implement new feature
+# PROJ-124        To Do                Fix critical bug
+# PROJ-125        In Review            Update documentation
+```
+
+**Create a new issue:**
+```bash
+jira create-issue PROJ "Fix login bug"
+# With assignee:
+jira create-issue PROJ "Add dark mode" john.doe
+```
+
+**Update issue status:**
+```bash
+jira update-issue-status PROJ-123 "In Progress"
+# Note: Status names must match your Jira workflow (e.g., "To Do", "In Progress", "Done")
+```
+
+**Add a comment:**
+```bash
+jira add-comment PROJ-123 "Working on this now"
+```
+
+**Get all comments:**
+```bash
+jira get-comments PROJ-123
 ```
 
 ### MCP Server Mode
 
 The MCP (Model Context Protocol) server allows AI assistants and other tools to interact with JIRA through a standardized JSON-RPC protocol over stdio. This enables seamless integration with AI coding assistants and other automation tools.
+
+Learn more about MCP: https://modelcontextprotocol.io
 
 **Setup:**
 
@@ -66,7 +135,7 @@ The MCP (Model Context Protocol) server allows AI assistants and other tools to 
    echo "your-api-token" | jira configure your-domain.atlassian.net
    ```
 
-2. Add the MCP server configuration to your MCP client:
+2. Add the MCP server configuration to your MCP client (e.g., Claude Desktop, Cline):
    ```json
    {
      "mcpServers": {
@@ -77,6 +146,10 @@ The MCP (Model Context Protocol) server allows AI assistants and other tools to 
      }
    }
    ```
+
+   For **Claude Desktop**, add this to:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 The server exposes the following tools:
 - `get_issue` - Get details of a JIRA issue (e.g., status, summary, reporter, description)
@@ -160,3 +233,36 @@ This automation helps keep your Jira board in sync with your actual development 
 - **Self-installing**: If the jira CLI is not found in `~/bin/jira`, it automatically downloads the appropriate binary for your platform
 
 **Note**: Update the Jira host (`jira.intuit.com` in the example) to match your organization's Jira instance.
+
+## Troubleshooting
+
+### Common Issues
+
+**"JIRA host must be configured" error**
+- Make sure you've run `jira configure <host>` or set the `JIRA_HOST` environment variable
+- Check that the config file exists: `cat ~/.config/jira-cli/config.json`
+
+**"Failed to get issue" or authentication errors**
+- Verify your API token is still valid (tokens can expire)
+- Re-run the configure command to update the token: `echo "new-token" | jira configure your-domain.atlassian.net`
+- Make sure your Jira user has permission to access the issue
+
+**"No transition found to status" error**
+- Status names must exactly match your Jira workflow (case-sensitive)
+- Different issue types may have different workflows
+- Use `jira get-issue <key>` to see the current status, then check your Jira board for valid transitions
+
+**Keyring issues on Linux**
+- Some Linux systems may not have a keyring service installed
+- Install `gnome-keyring` or `kwallet` for your desktop environment
+- Alternatively, use environment variables: `export JIRA_TOKEN=your-token`
+
+**MCP server not appearing in Claude Desktop**
+- Restart Claude Desktop after editing the config file
+- Check the config file syntax is valid JSON
+- Verify the `jira` binary is in your PATH: `which jira`
+
+### Getting Help
+
+- Report issues: https://github.com/kitproj/jira-cli/issues
+- Check existing issues for solutions and workarounds
