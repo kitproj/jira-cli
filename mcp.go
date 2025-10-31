@@ -120,6 +120,14 @@ func runMCPServer(ctx context.Context) error {
 		return createIssueHandler(ctx, api, request)
 	})
 
+	// Add list-issues tool
+	listIssuesTool := mcp.NewTool("list_issues",
+		mcp.WithDescription("List issues assigned to the current user that are unresolved and updated in the last 14 days"),
+	)
+	s.AddTool(listIssuesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return listIssuesHandler(ctx, api, request)
+	})
+
 	// Start the stdio server
 	return server.ServeStdio(s)
 }
@@ -306,4 +314,34 @@ func createIssueHandler(ctx context.Context, client *jira.Client, request mcp.Ca
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf("Successfully created issue: %s", createdIssue.Key)), nil
+}
+
+func listIssuesHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// JQL to find issues assigned to the current user, excluding closed issues, updated in last 14 days
+	jql := "assignee = currentUser() AND resolution = Unresolved AND updated >= -14d ORDER BY updated DESC"
+
+	// Search for issues using JQL
+	issues, _, err := client.Issue.SearchWithContext(ctx, jql, &jira.SearchOptions{
+		MaxResults: 50,
+		Fields:     []string{"key", "summary", "status"},
+	})
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to search issues: %v", err)), nil
+	}
+
+	if len(issues) == 0 {
+		return mcp.NewToolResultText("No issues assigned to you in the last 14 days"), nil
+	}
+
+	result := fmt.Sprintf("Found %d issue(s) in the last 14 days", len(issues))
+	if len(issues) >= 50 {
+		result += " (showing first 50 only)"
+	}
+	result += ":\n\n"
+
+	for _, issue := range issues {
+		result += fmt.Sprintf("%-15s %-20s %s\n", issue.Key, issue.Fields.Status.Name, issue.Fields.Summary)
+	}
+
+	return mcp.NewToolResultText(result), nil
 }

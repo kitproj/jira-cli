@@ -33,6 +33,7 @@ func main() {
 		fmt.Fprintln(w, "  jira configure <host> - Configure JIRA host and token (reads token from stdin)")
 		fmt.Fprintln(w, "  jira create-issue <project> <description> [assignee] - Create a new JIRA issue")
 		fmt.Fprintln(w, "  jira get-issue <issue-key> - Get details of the specified JIRA issue")
+		fmt.Fprintln(w, "  jira list-issues - List issues assigned to the current user")
 		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue")
@@ -107,6 +108,8 @@ func run(ctx context.Context, args []string) error {
 		}
 		issueKey = args[1]
 		return executeCommand(ctx, getComments)
+	case "list-issues":
+		return executeCommand(ctx, listIssues)
 	case "mcp-server":
 		return runMCPServer(ctx)
 	default:
@@ -363,5 +366,37 @@ func configure(host string) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Configuration saved successfully for host: %s\n", host)
+	return nil
+}
+
+// listIssues lists issues assigned to the current user
+func listIssues(ctx context.Context) error {
+	// JQL to find issues assigned to the current user, excluding closed issues, updated in last 14 days
+	jql := "assignee = currentUser() AND resolution = Unresolved AND updated >= -14d ORDER BY updated DESC"
+
+	// Search for issues using JQL
+	issues, _, err := client.Issue.SearchWithContext(ctx, jql, &jira.SearchOptions{
+		MaxResults: 50,
+		Fields:     []string{"key", "summary", "status"},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to search issues: %w", err)
+	}
+
+	if len(issues) == 0 {
+		fmt.Println("No issues assigned to you in the last 14 days")
+		return nil
+	}
+
+	fmt.Printf("Found %d issue(s) in the last 14 days", len(issues))
+	if len(issues) >= 50 {
+		fmt.Printf(" (showing first 50 only)")
+	}
+	fmt.Printf(":\n\n")
+
+	for _, issue := range issues {
+		fmt.Printf("%-15s %-20s %s\n", issue.Key, issue.Fields.Status.Name, issue.Fields.Summary)
+	}
+
 	return nil
 }
