@@ -2,7 +2,7 @@
 
 A Jira CLI and MCP server that allows you and your coding agents to get issue information from Jira. Inspired by the GitHub CLI, it aims to provide a simple and efficient way to humans and agents interact with Jira from the command line.
 
-Being both a CLI and an MCP server means you get the best of both worlds. Agents can be directed to perform specific commands (e.g. `Put the Jira "In progress" by running jira update-issue-states ABC-123 "In Progress"`, or knowing they will do it correctly.
+Being both a CLI and an MCP server means you get the best of both worlds. Agents can be directed to perform specific commands (e.g. `Put the Jira "In progress" by running jira update-issue-status ABC-123 "In Progress"`, or knowing they will do it correctly.
 
 Like `jq`, it is a single tiny (10Mb) binary, without the overhead of installing a Node runtime, and without the need to put your Jira token in plain text file (it uses the system key-ring).
 
