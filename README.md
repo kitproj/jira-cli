@@ -28,6 +28,7 @@ Add this to your prompt (e.g. `AGENTS.md`):
   - `jira update-issue-status <issue-key> <status>` - updates the status of the Jira issue, e.g., to  "In Progress" or "Closed".
   - `jira get-comments <issue-key>` - gets the comments on the Jira issue.
   - `jira add-comment <issue-key> "<comment>"` - adds a comment to the Jira issue. You must not use double quotes in the comment.
+  - `jira mcp-server` - starts an MCP server that exposes JIRA operations as tools for AI assistants.
 - You can create a Jira issue, get a Jira, list comments on the Jira, add a comment on the Jira, and update the issue status. You cannot do anything else.
 - Refuse to work on closed Jira issues.
 
@@ -52,7 +53,9 @@ The `jira` CLI can be configured in two ways:
    ```
    Note: The JIRA_TOKEN environment variable is still supported for backward compatibility, but using the keyring (via `jira configure`) is more secure on multi-user systems.
 
-### Commands
+## Usage
+
+### Direct CLI Usage
 
 ```bash
 Usage:
@@ -63,8 +66,48 @@ Usage:
   jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue
   jira get-comments <issue-key> - Get comments of the specified JIRA issue
   jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue
-
+  jira mcp-server - Start MCP server (Model Context Protocol)
 ```
+
+**Example:**
+```bash
+jira get-issue PROJ-123
+```
+
+### MCP Server Mode
+
+The MCP (Model Context Protocol) server allows AI assistants and other tools to interact with JIRA through a standardized JSON-RPC protocol over stdio. This enables seamless integration with AI coding assistants and other automation tools.
+
+**Setup:**
+
+1. First, configure your JIRA host and token (stored securely in the system keyring):
+   ```bash
+   echo "your-api-token" | jira configure your-domain.atlassian.net
+   ```
+
+2. Add the MCP server configuration to your MCP client:
+   ```json
+   {
+     "mcpServers": {
+       "jira": {
+         "command": "jira",
+         "args": ["mcp-server"]
+       }
+     }
+   }
+   ```
+
+The server exposes the following tools:
+- `get_issue` - Get details of a JIRA issue (e.g., status, summary, reporter, description)
+- `update_issue_status` - Update the status of a JIRA issue using transitions
+- `add_comment` - Add a comment to a JIRA issue
+- `get_comments` - Get all comments on a JIRA issue
+- `create_issue` - Create a new JIRA issue with specified project, description, and optional assignee
+
+**Example usage from an AI assistant:**
+> "Get the details of issue PROJ-123 and add a comment saying the work is in progress."
+
+
 
 ## Git Hook Integration
 
