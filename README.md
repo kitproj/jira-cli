@@ -84,6 +84,7 @@ The server exposes the following tools:
 - `add_comment` - Add a comment to a JIRA issue
 - `get_comments` - Get all comments on a JIRA issue
 - `create_issue` - Create a new JIRA issue with specified project, description, and optional assignee
+- `list_issues` - List issues assigned to the current user that are unresolved and updated in the last 14 days
 
 **Example usage from an AI assistant:**
 > "Get the details of issue PROJ-123 and add a comment saying the work is in progress."
