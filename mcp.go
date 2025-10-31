@@ -330,10 +330,10 @@ func listIssuesHandler(ctx context.Context, client *jira.Client, request mcp.Cal
 	}
 
 	if len(issues) == 0 {
-		return mcp.NewToolResultText("No issues assigned to you"), nil
+		return mcp.NewToolResultText("No issues assigned to you in the last 14 days"), nil
 	}
 
-	result := fmt.Sprintf("Found %d issue(s)", len(issues))
+	result := fmt.Sprintf("Found %d issue(s) in the last 14 days", len(issues))
 	if len(issues) >= 50 {
 		result += " (showing first 50 only)"
 	}
