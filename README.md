@@ -78,6 +78,7 @@ Usage:
   jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue
   jira get-comments <issue-key> - Get comments of the specified JIRA issue
   jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue
+  jira attach-file <issue-key> <file-path> - Attach a file to the specified JIRA issue
   jira mcp-server - Start MCP server (Model Context Protocol)
 ```
 
@@ -122,6 +123,13 @@ jira add-comment PROJ-123 "Working on this now"
 jira get-comments PROJ-123
 ```
 
+**Attach a file:**
+```bash
+jira attach-file PROJ-123 /path/to/document.pdf
+# Attach a screenshot
+jira attach-file PROJ-456 ~/screenshots/bug-screenshot.png
+```
+
 ### MCP Server Mode
 
 The MCP (Model Context Protocol) server allows AI assistants and other tools to interact with JIRA through a standardized JSON-RPC protocol over stdio. This enables seamless integration with AI coding assistants and other automation tools.
@@ -158,6 +166,7 @@ The server exposes the following tools:
 - `get_comments` - Get all comments on a JIRA issue
 - `create_issue` - Create a new JIRA issue with specified project, description, and optional assignee
 - `list_issues` - List issues assigned to the current user that are unresolved and updated in the last 14 days
+- `attach_file` - Attach a file to a JIRA issue
 
 **Example usage from an AI assistant:**
 > "Get the details of issue PROJ-123 and add a comment saying the work is in progress."

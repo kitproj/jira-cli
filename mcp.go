@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/andygrunwald/go-jira"
@@ -126,6 +127,22 @@ func runMCPServer(ctx context.Context) error {
 	)
 	s.AddTool(listIssuesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return listIssuesHandler(ctx, api, request)
+	})
+
+	// Add attach-file tool
+	attachFileTool := mcp.NewTool("attach_file",
+		mcp.WithDescription("Attach a file to a JIRA issue"),
+		mcp.WithString("issue_key",
+			mcp.Required(),
+			mcp.Description("JIRA issue key (e.g., 'PROJ-123')"),
+		),
+		mcp.WithString("file_path",
+			mcp.Required(),
+			mcp.Description("Path to the file to attach"),
+		),
+	)
+	s.AddTool(attachFileTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return attachFileHandler(ctx, api, request)
 	})
 
 	// Start the stdio server
@@ -344,4 +361,45 @@ func listIssuesHandler(ctx context.Context, client *jira.Client, request mcp.Cal
 	}
 
 	return mcp.NewToolResultText(result), nil
+}
+
+func attachFileHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	issueKey, err := request.RequireString("issue_key")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'issue_key' argument: %v", err)), nil
+	}
+
+	filePath, err := request.RequireString("file_path")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'file_path' argument: %v", err)), nil
+	}
+
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to open file: %v", err)), nil
+	}
+	defer file.Close()
+
+	// Get the file name from the path
+	fileName := filePath
+	if idx := strings.LastIndex(filePath, "/"); idx != -1 {
+		fileName = filePath[idx+1:]
+	}
+	if idx := strings.LastIndex(fileName, "\\"); idx != -1 {
+		fileName = fileName[idx+1:]
+	}
+
+	// Post the attachment
+	attachments, _, err := client.Issue.PostAttachmentWithContext(ctx, issueKey, file, fileName)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to attach file: %v", err)), nil
+	}
+
+	if attachments != nil && len(*attachments) > 0 {
+		attachment := (*attachments)[0]
+		return mcp.NewToolResultText(fmt.Sprintf("Successfully attached file '%s' to issue %s (ID: %s)", attachment.Filename, issueKey, attachment.ID)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Successfully attached file to issue %s", issueKey)), nil
 }
