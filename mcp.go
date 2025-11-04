@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/andygrunwald/go-jira"
@@ -381,14 +382,8 @@ func attachFileHandler(ctx context.Context, client *jira.Client, request mcp.Cal
 	}
 	defer file.Close()
 
-	// Get the file name from the path
-	fileName := filePath
-	if idx := strings.LastIndex(filePath, "/"); idx != -1 {
-		fileName = filePath[idx+1:]
-	}
-	if idx := strings.LastIndex(fileName, "\\"); idx != -1 {
-		fileName = fileName[idx+1:]
-	}
+	// Get the file name from the path using filepath.Base for cross-platform compatibility
+	fileName := filepath.Base(filePath)
 
 	// Post the attachment
 	attachments, _, err := client.Issue.PostAttachmentWithContext(ctx, issueKey, file, fileName)
