@@ -56,3 +56,56 @@ func TestRun_MCPServerMissingConfig(t *testing.T) {
 		t.Errorf("Expected 'JIRA host must be configured' error, got: %v", err)
 	}
 }
+
+func TestRun_AttachFileMissingArgs(t *testing.T) {
+	ctx := context.Background()
+
+	// Test with no arguments
+	err := run(ctx, []string{"attach-file"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira attach-file") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+
+	// Test with only issue key
+	err = run(ctx, []string{"attach-file", "TEST-123"})
+	if err == nil {
+		t.Error("Expected error for missing file path, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira attach-file") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+}
+
+func TestRun_AttachFileNonExistentFile(t *testing.T) {
+	// Set JIRA_HOST and JIRA_TOKEN env vars
+	oldHost := os.Getenv("JIRA_HOST")
+	oldToken := os.Getenv("JIRA_TOKEN")
+	os.Setenv("JIRA_HOST", "test.atlassian.net")
+	os.Setenv("JIRA_TOKEN", "test-token")
+	defer func() {
+		if oldHost == "" {
+			os.Unsetenv("JIRA_HOST")
+		} else {
+			os.Setenv("JIRA_HOST", oldHost)
+		}
+		if oldToken == "" {
+			os.Unsetenv("JIRA_TOKEN")
+		} else {
+			os.Setenv("JIRA_TOKEN", oldToken)
+		}
+	}()
+
+	ctx := context.Background()
+	err := run(ctx, []string{"attach-file", "TEST-123", "/tmp/nonexistent-file-12345.txt"})
+
+	if err == nil {
+		t.Error("Expected error for non-existent file, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to open file") {
+		t.Errorf("Expected 'failed to open file' error, got: %v", err)
+	}
+}
+

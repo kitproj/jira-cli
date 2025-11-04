@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"syscall"
@@ -37,6 +38,7 @@ func main() {
 		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue")
+		fmt.Fprintln(w, "  jira attach-file <issue-key> <file-path> - Attach a file to the specified JIRA issue")
 		fmt.Fprintln(w, "  jira mcp-server - Start MCP server (stdio transport)")
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Options:")
@@ -110,6 +112,15 @@ func run(ctx context.Context, args []string) error {
 		return executeCommand(ctx, getComments)
 	case "list-issues":
 		return executeCommand(ctx, listIssues)
+	case "attach-file":
+		if len(args) < 3 {
+			return fmt.Errorf("usage: jira attach-file <issue-key> <file-path>")
+		}
+		issueKey = args[1]
+		filePath := args[2]
+		return executeCommand(ctx, func(ctx context.Context) error {
+			return attachFile(ctx, filePath)
+		})
 	case "mcp-server":
 		return runMCPServer(ctx)
 	default:
@@ -396,6 +407,34 @@ func listIssues(ctx context.Context) error {
 
 	for _, issue := range issues {
 		fmt.Printf("%-15s %-20s %s\n", issue.Key, issue.Fields.Status.Name, issue.Fields.Summary)
+	}
+
+	return nil
+}
+
+// attachFile attaches a file to a Jira issue
+func attachFile(ctx context.Context, filePath string) error {
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	// Get the file name from the path using filepath.Base for cross-platform compatibility
+	fileName := filepath.Base(filePath)
+
+	// Post the attachment
+	attachments, _, err := client.Issue.PostAttachmentWithContext(ctx, issueKey, file, fileName)
+	if err != nil {
+		return fmt.Errorf("failed to attach file: %w", err)
+	}
+
+	if attachments != nil && len(*attachments) > 0 {
+		attachment := (*attachments)[0]
+		fmt.Printf("Successfully attached file '%s' to issue %s (ID: %s)\n", attachment.Filename, issueKey, attachment.ID)
+	} else {
+		fmt.Printf("Successfully attached file to issue %s\n", issueKey)
 	}
 
 	return nil
