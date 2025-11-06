@@ -79,6 +79,8 @@ Usage:
   jira get-comments <issue-key> - Get comments of the specified JIRA issue
   jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue
   jira attach-file <issue-key> <file-path> - Attach a file to the specified JIRA issue
+  jira assign-issue <issue-key> <assignee> - Assign an issue to a user
+  jira add-issue-to-sprint <issue-key> - Add an issue to the current sprint
   jira mcp-server - Start MCP server (Model Context Protocol)
 ```
 
@@ -138,6 +140,18 @@ jira attach-file PROJ-123 /path/to/document.pdf
 jira attach-file PROJ-456 ~/screenshots/bug-screenshot.png
 ```
 
+**Assign an issue:**
+```bash
+jira assign-issue PROJ-123 john.doe
+# Assigns the issue PROJ-123 to user john.doe
+```
+
+**Add an issue to the current sprint:**
+```bash
+jira add-issue-to-sprint PROJ-123
+# Adds the issue to the currently active sprint for its project
+```
+
 ### MCP Server Mode
 
 The MCP (Model Context Protocol) server allows AI assistants and other tools to interact with JIRA through a standardized JSON-RPC protocol over stdio. This enables seamless integration with AI coding assistants and other automation tools.
@@ -175,6 +189,8 @@ The server exposes the following tools:
 - `create_issue` - Create a new JIRA issue with specified project, issue type (Story/Bug/Task), title, description, and optional assignee
 - `list_issues` - List issues assigned to the current user that are unresolved and updated in the last 14 days
 - `attach_file` - Attach a file to a JIRA issue
+- `assign_issue` - Assign a JIRA issue to a user
+- `add_issue_to_sprint` - Add a JIRA issue to the current active sprint
 
 **Example usage from an AI assistant:**
 > "Get the details of issue PROJ-123 and add a comment saying the work is in progress."

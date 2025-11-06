@@ -109,6 +109,41 @@ func TestRun_AttachFileNonExistentFile(t *testing.T) {
 	}
 }
 
+func TestRun_AssignIssueMissingArgs(t *testing.T) {
+	ctx := context.Background()
+
+	// Test with no arguments
+	err := run(ctx, []string{"assign-issue"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira assign-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+
+	// Test with only issue key
+	err = run(ctx, []string{"assign-issue", "TEST-123"})
+	if err == nil {
+		t.Error("Expected error for missing assignee, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira assign-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+}
+
+func TestRun_AddIssueToSprintMissingArgs(t *testing.T) {
+	ctx := context.Background()
+
+	// Test with no arguments
+	err := run(ctx, []string{"add-issue-to-sprint"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira add-issue-to-sprint") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+}
+
 func TestRun_CreateIssueMissingArgs(t *testing.T) {
 	ctx := context.Background()
 
