@@ -459,9 +459,7 @@ func addIssueToSprintHandler(ctx context.Context, client *jira.Client, request m
 	}
 
 	// First, get the issue to find its project/board
-	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, &jira.GetQueryOptions{
-		Expand: "sprint",
-	})
+	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, nil)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to get issue: %v", err)), nil
 	}

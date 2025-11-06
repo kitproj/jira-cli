@@ -477,9 +477,7 @@ func assignIssue(ctx context.Context, assignee string) error {
 // addIssueToSprint adds an issue to the current sprint
 func addIssueToSprint(ctx context.Context) error {
 	// First, get the issue to find its project/board
-	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, &jira.GetQueryOptions{
-		Expand: "sprint",
-	})
+	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get issue: %w", err)
 	}
