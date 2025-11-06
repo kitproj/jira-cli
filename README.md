@@ -175,8 +175,6 @@ The server exposes the following tools:
 - `create_issue` - Create a new JIRA issue with specified project, issue type (Story/Bug/Task), title, description, and optional assignee
 - `list_issues` - List issues assigned to the current user that are unresolved and updated in the last 14 days
 - `attach_file` - Attach a file to a JIRA issue
-- `list_issues` - List issues assigned to the current user that are unresolved and updated in the last 14 days
-- `attach_file` - Attach a file to a JIRA issue
 
 **Example usage from an AI assistant:**
 > "Get the details of issue PROJ-123 and add a comment saying the work is in progress."
