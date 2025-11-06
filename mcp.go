@@ -146,6 +146,34 @@ func runMCPServer(ctx context.Context) error {
 		return attachFileHandler(ctx, api, request)
 	})
 
+	// Add assign-issue tool
+	assignIssueTool := mcp.NewTool("assign_issue",
+		mcp.WithDescription("Assign a JIRA issue to a user"),
+		mcp.WithString("issue_key",
+			mcp.Required(),
+			mcp.Description("JIRA issue key (e.g., 'PROJ-123')"),
+		),
+		mcp.WithString("assignee",
+			mcp.Required(),
+			mcp.Description("Username of the assignee"),
+		),
+	)
+	s.AddTool(assignIssueTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return assignIssueHandler(ctx, api, request)
+	})
+
+	// Add add-issue-to-sprint tool
+	addIssueToSprintTool := mcp.NewTool("add_issue_to_sprint",
+		mcp.WithDescription("Add a JIRA issue to the current active sprint"),
+		mcp.WithString("issue_key",
+			mcp.Required(),
+			mcp.Description("JIRA issue key (e.g., 'PROJ-123')"),
+		),
+	)
+	s.AddTool(addIssueToSprintTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return addIssueToSprintHandler(ctx, api, request)
+	})
+
 	// Start the stdio server
 	return server.ServeStdio(s)
 }
@@ -397,4 +425,80 @@ func attachFileHandler(ctx context.Context, client *jira.Client, request mcp.Cal
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf("Successfully attached file to issue %s", issueKey)), nil
+}
+
+func assignIssueHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	issueKey, err := request.RequireString("issue_key")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'issue_key' argument: %v", err)), nil
+	}
+
+	assignee, err := request.RequireString("assignee")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'assignee' argument: %v", err)), nil
+	}
+
+	// Create a User object with the assignee name
+	user := &jira.User{
+		Name: assignee,
+	}
+
+	// Update the assignee
+	_, err = client.Issue.UpdateAssigneeWithContext(ctx, issueKey, user)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to assign issue: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Successfully assigned issue %s to %s", issueKey, assignee)), nil
+}
+
+func addIssueToSprintHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	issueKey, err := request.RequireString("issue_key")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'issue_key' argument: %v", err)), nil
+	}
+
+	// First, get the issue to find its project/board
+	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, nil)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to get issue: %v", err)), nil
+	}
+
+	// Get all boards to find the one that contains this issue's project
+	boards, _, err := client.Board.GetAllBoardsWithContext(ctx, &jira.BoardListOptions{
+		ProjectKeyOrID: issue.Fields.Project.Key,
+	})
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to get boards: %v", err)), nil
+	}
+
+	if len(boards.Values) == 0 {
+		return mcp.NewToolResultError(fmt.Sprintf("No boards found for project %s", issue.Fields.Project.Key)), nil
+	}
+
+	// Use the first board (typically the main board for the project)
+	boardID := boards.Values[0].ID
+
+	// Get all sprints for this board
+	sprints, _, err := client.Board.GetAllSprintsWithOptionsWithContext(ctx, boardID, &jira.GetAllSprintsOptions{
+		State: "active",
+	})
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to get sprints: %v", err)), nil
+	}
+
+	if len(sprints.Values) == 0 {
+		return mcp.NewToolResultError(fmt.Sprintf("No active sprint found for board %d", boardID)), nil
+	}
+
+	// Use the first active sprint
+	sprintID := sprints.Values[0].ID
+
+	// Move the issue to the sprint
+	_, err = client.Sprint.MoveIssuesToSprintWithContext(ctx, sprintID, []string{issueKey})
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Failed to add issue to sprint: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(fmt.Sprintf("Successfully added issue %s to sprint %s (ID: %d)", issueKey, sprints.Values[0].Name, sprintID)), nil
 }

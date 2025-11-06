@@ -39,6 +39,8 @@ func main() {
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue")
 		fmt.Fprintln(w, "  jira attach-file <issue-key> <file-path> - Attach a file to the specified JIRA issue")
+		fmt.Fprintln(w, "  jira assign-issue <issue-key> <assignee> - Assign an issue to a user")
+		fmt.Fprintln(w, "  jira add-issue-to-sprint <issue-key> - Add an issue to the current sprint")
 		fmt.Fprintln(w, "  jira mcp-server - Start MCP server (stdio transport)")
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Options:")
@@ -121,6 +123,21 @@ func run(ctx context.Context, args []string) error {
 		return executeCommand(ctx, func(ctx context.Context) error {
 			return attachFile(ctx, filePath)
 		})
+	case "assign-issue":
+		if len(args) < 3 {
+			return fmt.Errorf("usage: jira assign-issue <issue-key> <assignee>")
+		}
+		issueKey = args[1]
+		assignee := args[2]
+		return executeCommand(ctx, func(ctx context.Context) error {
+			return assignIssue(ctx, assignee)
+		})
+	case "add-issue-to-sprint":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: jira add-issue-to-sprint <issue-key>")
+		}
+		issueKey = args[1]
+		return executeCommand(ctx, addIssueToSprint)
 	case "mcp-server":
 		return runMCPServer(ctx)
 	default:
@@ -437,5 +454,70 @@ func attachFile(ctx context.Context, filePath string) error {
 		fmt.Printf("Successfully attached file to issue %s\n", issueKey)
 	}
 
+	return nil
+}
+
+// assignIssue assigns an issue to a user
+func assignIssue(ctx context.Context, assignee string) error {
+	// Create a User object with the assignee name
+	user := &jira.User{
+		Name: assignee,
+	}
+
+	// Update the assignee
+	_, err := client.Issue.UpdateAssigneeWithContext(ctx, issueKey, user)
+	if err != nil {
+		return fmt.Errorf("failed to assign issue: %w", err)
+	}
+
+	fmt.Printf("Successfully assigned issue %s to %s\n", issueKey, assignee)
+	return nil
+}
+
+// addIssueToSprint adds an issue to the current sprint
+func addIssueToSprint(ctx context.Context) error {
+	// First, get the issue to find its project/board
+	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, nil)
+	if err != nil {
+		return fmt.Errorf("failed to get issue: %w", err)
+	}
+
+	// Get all boards to find the one that contains this issue's project
+	boards, _, err := client.Board.GetAllBoardsWithContext(ctx, &jira.BoardListOptions{
+		ProjectKeyOrID: issue.Fields.Project.Key,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get boards: %w", err)
+	}
+
+	if len(boards.Values) == 0 {
+		return fmt.Errorf("no boards found for project %s", issue.Fields.Project.Key)
+	}
+
+	// Use the first board (typically the main board for the project)
+	boardID := boards.Values[0].ID
+
+	// Get all sprints for this board
+	sprints, _, err := client.Board.GetAllSprintsWithOptionsWithContext(ctx, boardID, &jira.GetAllSprintsOptions{
+		State: "active",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get sprints: %w", err)
+	}
+
+	if len(sprints.Values) == 0 {
+		return fmt.Errorf("no active sprint found for board %d", boardID)
+	}
+
+	// Use the first active sprint
+	sprintID := sprints.Values[0].ID
+
+	// Move the issue to the sprint
+	_, err = client.Sprint.MoveIssuesToSprintWithContext(ctx, sprintID, []string{issueKey})
+	if err != nil {
+		return fmt.Errorf("failed to add issue to sprint: %w", err)
+	}
+
+	fmt.Printf("Successfully added issue %s to sprint %s (ID: %d)\n", issueKey, sprints.Values[0].Name, sprintID)
 	return nil
 }
