@@ -109,3 +109,73 @@ func TestRun_AttachFileNonExistentFile(t *testing.T) {
 	}
 }
 
+func TestRun_CreateIssueMissingArgs(t *testing.T) {
+	ctx := context.Background()
+
+	// Test with no arguments
+	err := run(ctx, []string{"create-issue"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira create-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+
+	// Test with only project
+	err = run(ctx, []string{"create-issue", "PROJ"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira create-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+
+	// Test with project and issue type
+	err = run(ctx, []string{"create-issue", "PROJ", "Task"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira create-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+
+	// Test with project, issue type, and title
+	err = run(ctx, []string{"create-issue", "PROJ", "Task", "My Title"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira create-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+}
+
+func TestRun_CreateIssueInvalidIssueType(t *testing.T) {
+	// Set JIRA_HOST and JIRA_TOKEN env vars
+	oldHost := os.Getenv("JIRA_HOST")
+	oldToken := os.Getenv("JIRA_TOKEN")
+	os.Setenv("JIRA_HOST", "test.atlassian.net")
+	os.Setenv("JIRA_TOKEN", "test-token")
+	defer func() {
+		if oldHost == "" {
+			os.Unsetenv("JIRA_HOST")
+		} else {
+			os.Setenv("JIRA_HOST", oldHost)
+		}
+		if oldToken == "" {
+			os.Unsetenv("JIRA_TOKEN")
+		} else {
+			os.Setenv("JIRA_TOKEN", oldToken)
+		}
+	}()
+
+	ctx := context.Background()
+	err := run(ctx, []string{"create-issue", "PROJ", "InvalidType", "Title", "Description"})
+
+	if err == nil {
+		t.Error("Expected error for invalid issue type, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid issue type") {
+		t.Errorf("Expected 'invalid issue type' error, got: %v", err)
+	}
+}
+

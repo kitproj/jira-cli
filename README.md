@@ -72,7 +72,7 @@ The `jira` CLI can be configured in two ways:
 ```bash
 Usage:
   jira configure <host> - Configure JIRA host and token (reads token from stdin)
-  jira create-issue <project> <description> [assignee] - Create a new JIRA issue
+  jira create-issue <project> <issue-type> <title> <description> [assignee] - Create a new JIRA issue
   jira get-issue <issue-key> - Get details of the specified JIRA issue
   jira list-issues - List issues assigned to the current user
   jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue
@@ -102,9 +102,17 @@ jira list-issues
 
 **Create a new issue:**
 ```bash
-jira create-issue PROJ "Fix login bug"
-# With assignee:
-jira create-issue PROJ "Add dark mode" john.doe
+# Create a Task
+jira create-issue PROJ Task "Fix login bug" "Users are unable to login after the latest update"
+
+# Create a Story
+jira create-issue PROJ Story "Add dark mode" "As a user, I want to enable dark mode for better viewing at night"
+
+# Create a Bug
+jira create-issue PROJ Bug "Login button not working" "The login button is unresponsive on mobile devices"
+
+# With assignee
+jira create-issue PROJ Task "Update documentation" "Add API documentation for new endpoints" john.doe
 ```
 
 **Update issue status:**
@@ -164,7 +172,9 @@ The server exposes the following tools:
 - `update_issue_status` - Update the status of a JIRA issue using transitions
 - `add_comment` - Add a comment to a JIRA issue
 - `get_comments` - Get all comments on a JIRA issue
-- `create_issue` - Create a new JIRA issue with specified project, description, and optional assignee
+- `create_issue` - Create a new JIRA issue with specified project, issue type (Story/Bug/Task), title, description, and optional assignee
+- `list_issues` - List issues assigned to the current user that are unresolved and updated in the last 14 days
+- `attach_file` - Attach a file to a JIRA issue
 - `list_issues` - List issues assigned to the current user that are unresolved and updated in the last 14 days
 - `attach_file` - Attach a file to a JIRA issue
 

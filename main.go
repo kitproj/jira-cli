@@ -32,7 +32,7 @@ func main() {
 		fmt.Fprintf(w, "Usage:")
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "  jira configure <host> - Configure JIRA host and token (reads token from stdin)")
-		fmt.Fprintln(w, "  jira create-issue <project> <description> [assignee] - Create a new JIRA issue")
+		fmt.Fprintln(w, "  jira create-issue <project> <issue-type> <title> <description> [assignee] - Create a new JIRA issue")
 		fmt.Fprintln(w, "  jira get-issue <issue-key> - Get details of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira list-issues - List issues assigned to the current user")
 		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
@@ -68,17 +68,19 @@ func run(ctx context.Context, args []string) error {
 		}
 		return configure(args[1])
 	case "create-issue":
-		if len(args) < 3 {
-			return fmt.Errorf("usage: jira create-issue <project> <description> [assignee]")
+		if len(args) < 5 {
+			return fmt.Errorf("usage: jira create-issue <project> <issue-type> <title> <description> [assignee]")
 		}
 		project := args[1]
-		description := args[2]
+		issueType := args[2]
+		title := args[3]
+		description := args[4]
 		var assignee string
-		if len(args) >= 4 {
-			assignee = args[3]
+		if len(args) >= 6 {
+			assignee = args[5]
 		}
 		return executeCommand(ctx, func(ctx context.Context) error {
-			return createIssue(ctx, project, description, assignee)
+			return createIssue(ctx, project, issueType, title, description, assignee)
 		})
 	case "get-issue":
 		if len(args) < 2 {
@@ -311,18 +313,28 @@ func getComments(ctx context.Context) error {
 	return nil
 }
 
-// createIssue creates a new JIRA issue with the specified project, description, and optional assignee
-func createIssue(ctx context.Context, projectKey, description, assignee string) error {
-	// Create a new issue with the Task issue type (most common default)
+// createIssue creates a new JIRA issue with the specified project, issue type, title, description, and optional assignee
+func createIssue(ctx context.Context, projectKey, issueType, title, description, assignee string) error {
+	// Validate issue type
+	validTypes := map[string]bool{
+		"Story": true,
+		"Bug":   true,
+		"Task":  true,
+	}
+	if !validTypes[issueType] {
+		return fmt.Errorf("invalid issue type '%s'. Valid types are: Story, Bug, Task", issueType)
+	}
+
+	// Create a new issue with the specified issue type
 	issue := &jira.Issue{
 		Fields: &jira.IssueFields{
 			Project: jira.Project{
 				Key: projectKey,
 			},
-			Summary:     description,
+			Summary:     title,
 			Description: description,
 			Type: jira.IssueType{
-				Name: "Task",
+				Name: issueType,
 			},
 		},
 	}
