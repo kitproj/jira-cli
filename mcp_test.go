@@ -149,33 +149,3 @@ func TestRun_CreateIssueMissingArgs(t *testing.T) {
 	}
 }
 
-func TestRun_CreateIssueInvalidIssueType(t *testing.T) {
-	// Set JIRA_HOST and JIRA_TOKEN env vars
-	oldHost := os.Getenv("JIRA_HOST")
-	oldToken := os.Getenv("JIRA_TOKEN")
-	os.Setenv("JIRA_HOST", "test.atlassian.net")
-	os.Setenv("JIRA_TOKEN", "test-token")
-	defer func() {
-		if oldHost == "" {
-			os.Unsetenv("JIRA_HOST")
-		} else {
-			os.Setenv("JIRA_HOST", oldHost)
-		}
-		if oldToken == "" {
-			os.Unsetenv("JIRA_TOKEN")
-		} else {
-			os.Setenv("JIRA_TOKEN", oldToken)
-		}
-	}()
-
-	ctx := context.Background()
-	err := run(ctx, []string{"create-issue", "PROJ", "InvalidType", "Title", "Description"})
-
-	if err == nil {
-		t.Error("Expected error for invalid issue type, got nil")
-	}
-	if !strings.Contains(err.Error(), "invalid issue type") {
-		t.Errorf("Expected 'invalid issue type' error, got: %v", err)
-	}
-}
-

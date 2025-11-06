@@ -315,16 +315,6 @@ func getComments(ctx context.Context) error {
 
 // createIssue creates a new JIRA issue with the specified project, issue type, title, description, and optional assignee
 func createIssue(ctx context.Context, projectKey, issueType, title, description, assignee string) error {
-	// Validate issue type
-	validTypes := map[string]bool{
-		"Story": true,
-		"Bug":   true,
-		"Task":  true,
-	}
-	if !validTypes[issueType] {
-		return fmt.Errorf("invalid issue type '%s'. Valid types are: Story, Bug, Task", issueType)
-	}
-
 	// Create a new issue with the specified issue type
 	issue := &jira.Issue{
 		Fields: &jira.IssueFields{

@@ -112,7 +112,7 @@ func runMCPServer(ctx context.Context) error {
 		),
 		mcp.WithString("issue_type",
 			mcp.Required(),
-			mcp.Description("Issue type: Story, Bug, or Task"),
+			mcp.Description("Issue type (e.g., Story, Bug, Task, or any custom type configured in your JIRA instance)"),
 		),
 		mcp.WithString("title",
 			mcp.Required(),
@@ -321,16 +321,6 @@ func createIssueHandler(ctx context.Context, client *jira.Client, request mcp.Ca
 	}
 
 	assignee := request.GetString("assignee", "")
-
-	// Validate issue type
-	validTypes := map[string]bool{
-		"Story": true,
-		"Bug":   true,
-		"Task":  true,
-	}
-	if !validTypes[issueType] {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid issue type '%s'. Valid types are: Story, Bug, Task", issueType)), nil
-	}
 
 	// Create a new issue
 	issue := &jira.Issue{
