@@ -105,14 +105,22 @@ func runMCPServer(ctx context.Context) error {
 
 	// Add create-issue tool
 	createIssueTool := mcp.NewTool("create_issue",
-		mcp.WithDescription("Create a new JIRA issue with the specified project, description, and optional assignee"),
+		mcp.WithDescription("Create a new JIRA issue with the specified project, issue type, title, description, and optional assignee"),
 		mcp.WithString("project",
 			mcp.Required(),
 			mcp.Description("JIRA project key"),
 		),
+		mcp.WithString("issue_type",
+			mcp.Required(),
+			mcp.Description("Issue type (e.g., Story, Bug, Task, or any custom type configured in your JIRA instance)"),
+		),
+		mcp.WithString("title",
+			mcp.Required(),
+			mcp.Description("Issue title (summary)"),
+		),
 		mcp.WithString("description",
 			mcp.Required(),
-			mcp.Description("Issue description (used as both summary and description)"),
+			mcp.Description("Issue description"),
 		),
 		mcp.WithString("assignee",
 			mcp.Description("Optional assignee username"),
@@ -325,6 +333,16 @@ func createIssueHandler(ctx context.Context, client *jira.Client, request mcp.Ca
 		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'project' argument: %v", err)), nil
 	}
 
+	issueType, err := request.RequireString("issue_type")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'issue_type' argument: %v", err)), nil
+	}
+
+	title, err := request.RequireString("title")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'title' argument: %v", err)), nil
+	}
+
 	description, err := request.RequireString("description")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'description' argument: %v", err)), nil
@@ -338,10 +356,10 @@ func createIssueHandler(ctx context.Context, client *jira.Client, request mcp.Ca
 			Project: jira.Project{
 				Key: projectKey,
 			},
-			Summary:     description,
+			Summary:     title,
 			Description: description,
 			Type: jira.IssueType{
-				Name: "Task",
+				Name: issueType,
 			},
 		},
 	}

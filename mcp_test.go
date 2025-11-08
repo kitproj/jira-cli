@@ -144,3 +144,43 @@ func TestRun_AddIssueToSprintMissingArgs(t *testing.T) {
 	}
 }
 
+func TestRun_CreateIssueMissingArgs(t *testing.T) {
+	ctx := context.Background()
+
+	// Test with no arguments
+	err := run(ctx, []string{"create-issue"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira create-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+
+	// Test with only project
+	err = run(ctx, []string{"create-issue", "PROJ"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira create-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+
+	// Test with project and issue type
+	err = run(ctx, []string{"create-issue", "PROJ", "Task"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira create-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+
+	// Test with project, issue type, and title
+	err = run(ctx, []string{"create-issue", "PROJ", "Task", "My Title"})
+	if err == nil {
+		t.Error("Expected error for missing arguments, got nil")
+	}
+	if !strings.Contains(err.Error(), "usage: jira create-issue") {
+		t.Errorf("Expected usage error, got: %v", err)
+	}
+}
+
