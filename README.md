@@ -20,13 +20,13 @@ Binaries are available for:
 Download the binary for your platform from the [release page](https://github.com/kitproj/jira-cli/releases), e.g. for linux/arm64:
 
 ```bash
-sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.9/jira_v0.0.9_linux_arm64
+sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.12/jira_v0.0.12_linux_arm64
 sudo chmod +x /usr/local/bin/jira
 ```
 
 For macOS (Apple Silicon):
 ```bash
-sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.9/jira_v0.0.9_darwin_arm64
+sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.12/jira_v0.0.12_darwin_arm64
 sudo chmod +x /usr/local/bin/jira
 ```
 
@@ -240,7 +240,7 @@ This automation helps keep your Jira board in sync with your actual development 
    if [ ! -e ~/bin/jira ]; then
        platform=$(uname -s | tr '[:upper:]' '[:lower:]')
        arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
-       curl -fsL -o ~/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.6/jira_v0.0.6_${platform}_${arch}
+       curl -fsL -o ~/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.12/jira_v0.0.12_${platform}_${arch}
        mkdir -p ~/bin
        chmod +x ~/bin/jira
    fi
