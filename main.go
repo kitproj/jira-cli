@@ -289,7 +289,7 @@ func updateIssueStatus(ctx context.Context, statusName string) error {
 		return fmt.Errorf("failed to update issue status: %w", err)
 	}
 
-	fmt.Printf("Successfully updated issue %s to status: %s\n", issueKey, statusName)
+	fmt.Printf("Successfully updated issue %s to status: %s (https://%s/browse/%s)\n", issueKey, statusName, host, issueKey)
 	return nil
 }
 
@@ -359,7 +359,7 @@ func createIssue(ctx context.Context, projectKey, issueType, title, description,
 		return fmt.Errorf("failed to create issue: %w", err)
 	}
 
-	fmt.Printf("Successfully created issue: %s\n", createdIssue.Key)
+	fmt.Printf("Successfully created issue: %s (https://%s/browse/%s)\n", createdIssue.Key, host, createdIssue.Key)
 	return nil
 }
 

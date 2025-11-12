@@ -72,7 +72,7 @@ func runMCPServer(ctx context.Context) error {
 		),
 	)
 	s.AddTool(updateStatusTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return updateIssueStatusHandler(ctx, api, request)
+		return updateIssueStatusHandler(ctx, api, host, request)
 	})
 
 	// Add add-comment tool
@@ -127,7 +127,7 @@ func runMCPServer(ctx context.Context) error {
 		),
 	)
 	s.AddTool(createIssueTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		return createIssueHandler(ctx, api, request)
+		return createIssueHandler(ctx, api, host, request)
 	})
 
 	// Add list-issues tool
@@ -220,7 +220,7 @@ func getIssueHandler(ctx context.Context, client *jira.Client, request mcp.CallT
 	return mcp.NewToolResultText(result), nil
 }
 
-func updateIssueStatusHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func updateIssueStatusHandler(ctx context.Context, client *jira.Client, host string, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	issueKey, err := request.RequireString("issue_key")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'issue_key' argument: %v", err)), nil
@@ -271,7 +271,7 @@ func updateIssueStatusHandler(ctx context.Context, client *jira.Client, request 
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to update issue status: %v", err)), nil
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Successfully updated issue %s to status: %s", issueKey, statusName)), nil
+	return mcp.NewToolResultText(fmt.Sprintf("Successfully updated issue %s to status: %s (https://%s/browse/%s)", issueKey, statusName, host, issueKey)), nil
 }
 
 func addCommentHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -327,7 +327,7 @@ func getCommentsHandler(ctx context.Context, client *jira.Client, request mcp.Ca
 	return mcp.NewToolResultText(result), nil
 }
 
-func createIssueHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func createIssueHandler(ctx context.Context, client *jira.Client, host string, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	projectKey, err := request.RequireString("project")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Missing or invalid 'project' argument: %v", err)), nil
@@ -377,7 +377,7 @@ func createIssueHandler(ctx context.Context, client *jira.Client, request mcp.Ca
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to create issue: %v", err)), nil
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Successfully created issue: %s", createdIssue.Key)), nil
+	return mcp.NewToolResultText(fmt.Sprintf("Successfully created issue: %s (https://%s/browse/%s)", createdIssue.Key, host, createdIssue.Key)), nil
 }
 
 func listIssuesHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
