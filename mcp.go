@@ -271,7 +271,7 @@ func updateIssueStatusHandler(ctx context.Context, client *jira.Client, host str
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to update issue status: %v", err)), nil
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Successfully updated issue %s to status: %s\nView issue: https://%s/browse/%s", issueKey, statusName, host, issueKey)), nil
+	return mcp.NewToolResultText(fmt.Sprintf("Successfully updated issue %s to status: %s (https://%s/browse/%s)", issueKey, statusName, host, issueKey)), nil
 }
 
 func addCommentHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -377,7 +377,7 @@ func createIssueHandler(ctx context.Context, client *jira.Client, host string, r
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to create issue: %v", err)), nil
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Successfully created issue: %s\nView issue: https://%s/browse/%s", createdIssue.Key, host, createdIssue.Key)), nil
+	return mcp.NewToolResultText(fmt.Sprintf("Successfully created issue: %s (https://%s/browse/%s)", createdIssue.Key, host, createdIssue.Key)), nil
 }
 
 func listIssuesHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
