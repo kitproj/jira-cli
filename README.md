@@ -17,20 +17,39 @@ Binaries are available for:
 
 ### Download and Install
 
-Download the binary for your platform from the [release page](https://github.com/kitproj/jira-cli/releases), e.g. for linux/arm64:
+Download the binary for your platform from the [release page](https://github.com/kitproj/jira-cli/releases).
 
+#### Linux
+
+**For Linux (amd64):**
 ```bash
-sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_linux_arm64
+sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_linux_amd64
 sudo chmod +x /usr/local/bin/jira
 ```
 
-For macOS (Apple Silicon):
+**For Linux (arm64):**
 ```bash
-sudo curl -fsL  -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_darwin_arm64
+sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_linux_arm64
 sudo chmod +x /usr/local/bin/jira
 ```
 
-Verify the installation:
+#### macOS
+
+**For macOS (Apple Silicon/arm64):**
+```bash
+sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_darwin_arm64
+sudo chmod +x /usr/local/bin/jira
+```
+
+**For macOS (Intel/amd64):**
+```bash
+sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_darwin_amd64
+sudo chmod +x /usr/local/bin/jira
+```
+
+#### Verify Installation
+
+After installing, verify the installation works:
 ```bash
 jira -h
 ```
