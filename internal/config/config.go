@@ -146,7 +146,10 @@ func isKeyringUnavailable(err error) bool {
 		strings.Contains(errMsg, "DBus") ||
 		strings.Contains(errMsg, "Cannot autolaunch") ||
 		strings.Contains(errMsg, "secret service") ||
-		strings.Contains(errMsg, "org.freedesktop.secrets")
+		strings.Contains(errMsg, "org.freedesktop.secrets") ||
+		strings.Contains(errMsg, "dial unix") || // Unix socket connection errors
+		strings.Contains(errMsg, "connection refused") ||
+		strings.Contains(errMsg, "permission denied") // Permission issues with dbus socket
 }
 
 // saveTokenToFile saves the token to a file as a fallback

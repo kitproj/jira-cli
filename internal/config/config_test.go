@@ -162,6 +162,21 @@ func TestIsKeyringUnavailable(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "unix socket error",
+			err:      &testError{"dial unix /run/user/0/bus: connect: no such file"},
+			expected: true,
+		},
+		{
+			name:     "connection refused error",
+			err:      &testError{"connection refused"},
+			expected: true,
+		},
+		{
+			name:     "permission denied error",
+			err:      &testError{"dial unix /run/user/0/bus: connect: permission denied"},
+			expected: true,
+		},
+		{
 			name:     "unrelated error",
 			err:      &testError{"some other error"},
 			expected: false,
