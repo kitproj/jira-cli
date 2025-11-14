@@ -23,13 +23,13 @@ Download the binary for your platform from the [release page](https://github.com
 
 **For Linux (amd64):**
 ```bash
-sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_linux_amd64
+sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.014/jira_v0.0.014_linux_amd64
 sudo chmod +x /usr/local/bin/jira
 ```
 
 **For Linux (arm64):**
 ```bash
-sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_linux_arm64
+sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.014/jira_v0.0.014_linux_arm64
 sudo chmod +x /usr/local/bin/jira
 ```
 
@@ -37,13 +37,13 @@ sudo chmod +x /usr/local/bin/jira
 
 **For macOS (Apple Silicon/arm64):**
 ```bash
-sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_darwin_arm64
+sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.014/jira_v0.0.014_darwin_arm64
 sudo chmod +x /usr/local/bin/jira
 ```
 
 **For macOS (Intel/amd64):**
 ```bash
-sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_darwin_amd64
+sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.014/jira_v0.0.014_darwin_amd64
 sudo chmod +x /usr/local/bin/jira
 ```
 
@@ -259,7 +259,7 @@ This automation helps keep your Jira board in sync with your actual development 
    if [ ! -e ~/bin/jira ]; then
        platform=$(uname -s | tr '[:upper:]' '[:lower:]')
        arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
-       curl -fsL -o ~/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.13/jira_v0.0.13_${platform}_${arch}
+       curl -fsL -o ~/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.014/jira_v0.0.014_${platform}_${arch}
        mkdir -p ~/bin
        chmod +x ~/bin/jira
    fi
