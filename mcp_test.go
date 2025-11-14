@@ -183,4 +183,3 @@ func TestRun_CreateIssueMissingArgs(t *testing.T) {
 		t.Errorf("Expected usage error, got: %v", err)
 	}
 }
-
