@@ -50,6 +50,7 @@ func TestRun_MCPServerMissingConfig(t *testing.T) {
 
 	if err == nil {
 		t.Error("Expected error for missing configuration, got nil")
+		return
 	}
 
 	if !strings.Contains(err.Error(), "JIRA host must be configured") {
