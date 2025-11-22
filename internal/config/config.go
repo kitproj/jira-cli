@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kitproj/jira-cli/internal/keyring"
+	"github.com/zalando/go-keyring"
 )
 
 const (

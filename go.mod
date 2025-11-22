@@ -9,8 +9,9 @@ require (
 	golang.org/x/term v0.36.0
 )
 
+replace github.com/zalando/go-keyring => github.com/kitproj/go-keyring v0.2.10
+
 require (
-	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
