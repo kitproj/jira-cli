@@ -19,33 +19,21 @@ Binaries are available for:
 
 Download the binary for your platform from the [release page](https://github.com/kitproj/jira-cli/releases).
 
-#### Linux
+#### Linux and macOS
 
-**For Linux (amd64):**
+The installation script automatically detects your platform and architecture:
+
 ```bash
-sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.15/jira_v0.0.15_linux_amd64
+VERSION=v0.0.15
+PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
+sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/${VERSION}/jira_${VERSION}_${PLATFORM}_${ARCH}
 sudo chmod +x /usr/local/bin/jira
 ```
 
-**For Linux (arm64):**
-```bash
-sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.15/jira_v0.0.15_linux_arm64
-sudo chmod +x /usr/local/bin/jira
-```
-
-#### macOS
-
-**For macOS (Apple Silicon/arm64):**
-```bash
-sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.15/jira_v0.0.15_darwin_arm64
-sudo chmod +x /usr/local/bin/jira
-```
-
-**For macOS (Intel/amd64):**
-```bash
-sudo curl -fsL -o /usr/local/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.15/jira_v0.0.15_darwin_amd64
-sudo chmod +x /usr/local/bin/jira
-```
+This works for:
+- **Linux**: amd64, arm64
+- **macOS**: amd64 (Intel), arm64 (Apple Silicon)
 
 #### Verify Installation
 
@@ -257,9 +245,10 @@ This automation helps keep your Jira board in sync with your actual development 
    fi
 
    if [ ! -e ~/bin/jira ]; then
+       VERSION=v0.0.15
        platform=$(uname -s | tr '[:upper:]' '[:lower:]')
        arch=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
-       curl -fsL -o ~/bin/jira https://github.com/kitproj/jira-cli/releases/download/v0.0.15/jira_v0.0.15_${platform}_${arch}
+       curl -fsL -o ~/bin/jira https://github.com/kitproj/jira-cli/releases/download/${VERSION}/jira_${VERSION}_${platform}_${arch}
        mkdir -p ~/bin
        chmod +x ~/bin/jira
    fi
