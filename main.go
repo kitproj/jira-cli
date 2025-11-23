@@ -357,7 +357,7 @@ func updateIssueStatus(ctx context.Context, statusName string, extra map[string]
 	// Perform the transition
 	_, err = client.Issue.DoTransitionWithPayloadWithContext(ctx, issueKey, payload)
 	if err != nil {
-		return fmt.Errorf("failed to update issue status: %v", err)
+		return fmt.Errorf("failed to update issue status: %w", err)
 	}
 
 	fmt.Printf("Successfully updated issue %s to status: %s (https://%s/browse/%s)\n", issueKey, statusName, host, issueKey)
