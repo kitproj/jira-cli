@@ -8,11 +8,13 @@ import (
 	"os/signal"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/kitproj/jira-cli/internal/config"
+	flagpkg "github.com/kitproj/jira-cli/internal/flag"
 	"golang.org/x/term"
 )
 
@@ -34,8 +36,8 @@ func main() {
 		fmt.Fprintln(w, "  jira configure <host> - Configure JIRA host and token (reads token from stdin)")
 		fmt.Fprintln(w, "  jira create-issue <project> <issue-type> <title> <description> [assignee] - Create a new JIRA issue")
 		fmt.Fprintln(w, "  jira get-issue <issue-key> - Get details of the specified JIRA issue")
-		fmt.Fprintln(w, "  jira list-issues - List issues assigned to the current user")
-		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue")
+		fmt.Fprintln(w, "  jira list-issues [-a=user] [-t=type] [-p=key] - List issues with optional filters")
+		fmt.Fprintln(w, "  jira update-issue-status <issue-key> <status> [-f field=value]... - Update the status of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira get-comments <issue-key> - Get comments of the specified JIRA issue")
 		fmt.Fprintln(w, "  jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue")
 		fmt.Fprintln(w, "  jira attach-file <issue-key> <file-path> - Attach a file to the specified JIRA issue")
@@ -92,12 +94,23 @@ func run(ctx context.Context, args []string) error {
 		return executeCommand(ctx, getIssue)
 	case "update-issue-status":
 		if len(args) < 3 {
-			return fmt.Errorf("usage: jira update-issue-status <issue-key> <status>")
+			return fmt.Errorf("usage: jira update-issue-status <issue-key> <status> [-f field=value]")
 		}
 		issueKey = args[1]
 		statusName := args[2]
+
+		// Create a new flag set for this command
+		fs := flag.NewFlagSet("update-issue-status", flag.ContinueOnError)
+		fields := make(flagpkg.FieldFlag)
+		fs.Var(fields, "f", "field=value pair to include in transition (can be specified multiple times)")
+
+		// Parse flags from remaining args
+		if err := fs.Parse(args[3:]); err != nil {
+			return fmt.Errorf("failed to parse flags: %w", err)
+		}
+
 		return executeCommand(ctx, func(ctx context.Context) error {
-			return updateIssueStatus(ctx, statusName)
+			return updateIssueStatus(ctx, statusName, map[string]string(fields))
 		})
 	case "add-comment":
 		if len(args) < 3 {
@@ -115,7 +128,20 @@ func run(ctx context.Context, args []string) error {
 		issueKey = args[1]
 		return executeCommand(ctx, getComments)
 	case "list-issues":
-		return executeCommand(ctx, listIssues)
+		// Create a new flag set for this command
+		fs := flag.NewFlagSet("list-issues", flag.ContinueOnError)
+		assignee := fs.String("a", "me", "filter by assignee (default: current user, use 'me' for current user)")
+		issueType := fs.String("t", "", "filter by issue type (e.g., Story, Bug, Task)")
+		project := fs.String("p", "", "filter by project key")
+
+		// Parse flags from args
+		if err := fs.Parse(args[1:]); err != nil {
+			return fmt.Errorf("failed to parse flags: %w", err)
+		}
+
+		return executeCommand(ctx, func(ctx context.Context) error {
+			return listIssues(ctx, *assignee, *issueType, *project)
+		})
 	case "attach-file":
 		if len(args) < 3 {
 			return fmt.Errorf("usage: jira attach-file <issue-key> <file-path>")
@@ -195,6 +221,7 @@ func getIssue(ctx context.Context) error {
 	}
 
 	printField("Key", issue.Key)
+	printField("Type", issue.Fields.Type.Name)
 	printField("Status", issue.Fields.Status.Name)
 	printField("Summary", issue.Fields.Summary)
 	printField("Reporter", fmt.Sprintf("%s (%s)", issue.Fields.Reporter.DisplayName, issue.Fields.Reporter.Name))
@@ -234,19 +261,19 @@ func isPrimitive(v any) bool {
 func printField(key string, value any) {
 	valueStr := fmt.Sprint(value)
 	multiLine := strings.Contains(valueStr, "\n")
-	fmt.Printf("%-20s", key+":")
+	fmt.Printf("%-32s", key+":")
 	if !multiLine {
 		fmt.Printf(" %s\n", valueStr)
 	} else {
 		fmt.Println()
 		for line := range strings.SplitSeq(valueStr, "\n") {
-			fmt.Printf("%-20s %s\n", "", line)
+			fmt.Printf("%-32s %s\n", "", line)
 		}
 	}
 }
 
 // updateIssueStatus updates the status of a Jira issue using transitions
-func updateIssueStatus(ctx context.Context, statusName string) error {
+func updateIssueStatus(ctx context.Context, statusName string, extra map[string]string) error {
 	// First, get the issue to check current status
 	issue, _, err := client.Issue.GetWithContext(ctx, issueKey, nil)
 	if err != nil {
@@ -283,8 +310,52 @@ func updateIssueStatus(ctx context.Context, statusName string) error {
 		return fmt.Errorf("no transition found to status '%s'. Available statuses: %v", statusName, strings.Join(availableStatuses, ", "))
 	}
 
+	// Get edit metadata to map field names to field IDs
+	editMetaInfo, _, err := client.Issue.GetEditMetaWithContext(ctx, issue)
+	if err != nil {
+		return fmt.Errorf("failed to get field metadata: %w", err)
+	}
+
+	fieldNameByID := make(map[string]string)
+	for fieldID, value := range editMetaInfo.Fields {
+		valueMap, ok := value.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, ok := valueMap["name"].(string)
+		if !ok {
+			continue
+		}
+		fieldNameByID[fieldID] = name
+	}
+
+	fields := make(map[string]any)
+
+	fmt.Println("Fields to update:")
+	for fieldID := range targetTransition.Fields {
+		fieldName := fieldNameByID[fieldID]
+		fieldValue := extra[fieldName]
+		printField(fmt.Sprintf("%s (%s)", fieldName, fieldID), fieldValue)
+
+		i, err := strconv.Atoi(fieldValue)
+		if err != nil {
+			fields[fieldID] = fieldValue
+		} else {
+			fields[fieldID] = i
+		}
+
+	}
+
+	// Build transition payload
+	payload := map[string]any{
+		"transition": map[string]any{
+			"id": targetTransition.ID,
+		},
+		"fields": fields,
+	}
+
 	// Perform the transition
-	_, err = client.Issue.DoTransition(issueKey, targetTransition.ID)
+	_, err = client.Issue.DoTransitionWithPayloadWithContext(ctx, issueKey, payload)
 	if err != nil {
 		return fmt.Errorf("failed to update issue status: %w", err)
 	}
@@ -354,7 +425,7 @@ func createIssue(ctx context.Context, projectKey, issueType, title, description,
 	}
 
 	// Create the issue
-	createdIssue, _, err := client.Issue.Create(issue)
+	createdIssue, _, err := client.Issue.CreateWithContext(ctx, issue)
 	if err != nil {
 		return fmt.Errorf("failed to create issue: %w", err)
 	}
@@ -399,33 +470,65 @@ func configure(host string) error {
 	return nil
 }
 
-// listIssues lists issues assigned to the current user
-func listIssues(ctx context.Context) error {
-	// JQL to find issues assigned to the current user, excluding closed issues, updated in last 14 days
-	jql := "assignee = currentUser() AND resolution = Unresolved AND updated >= -14d ORDER BY updated DESC"
+// listIssues lists issues with optional filters
+func listIssues(ctx context.Context, assigneeFilter, issueTypeFilter, projectFilter string) error {
+	// Build JQL query dynamically based on filters
+	var conditions []string
+
+	// Assignee filter (default to currentUser() if not specified)
+	if assigneeFilter == "me" {
+		conditions = append(conditions, "assignee = currentUser()")
+	} else if assigneeFilter != "" {
+		conditions = append(conditions, fmt.Sprintf("assignee = %q", assigneeFilter))
+	}
+
+	// Project filter
+	if projectFilter != "" {
+		conditions = append(conditions, fmt.Sprintf("project = %q", projectFilter))
+	}
+
+	// Issue type filter
+	if issueTypeFilter != "" {
+		conditions = append(conditions, fmt.Sprintf("issuetype = %q", issueTypeFilter))
+	}
+
+	// Default: exclude resolved issues
+	conditions = append(conditions, "resolution = Unresolved")
+
+	// Default: updated in last 14 days if no specific filters
+	if projectFilter == "" && issueTypeFilter == "" {
+		conditions = append(conditions, "updated >= -14d")
+	}
+
+	// Build JQL query
+	jql := strings.Join(conditions, " AND ") + " ORDER BY updated DESC"
 
 	// Search for issues using JQL
 	issues, _, err := client.Issue.SearchWithContext(ctx, jql, &jira.SearchOptions{
 		MaxResults: 50,
-		Fields:     []string{"key", "summary", "status"},
+		Fields:     []string{"key", "issuetype", "summary", "status", "assignee", "project"},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to search issues: %w", err)
 	}
 
 	if len(issues) == 0 {
-		fmt.Println("No issues assigned to you in the last 14 days")
+		fmt.Println("No issues found matching the specified criteria")
 		return nil
 	}
 
-	fmt.Printf("Found %d issue(s) in the last 14 days", len(issues))
+	fmt.Printf("Found %d issue(s)", len(issues))
 	if len(issues) >= 50 {
 		fmt.Printf(" (showing first 50 only)")
 	}
 	fmt.Printf(":\n\n")
 
 	for _, issue := range issues {
-		fmt.Printf("%-15s %-20s %s\n", issue.Key, issue.Fields.Status.Name, issue.Fields.Summary)
+		assigneeName := "-"
+		if issue.Fields.Assignee != nil {
+			assigneeName = issue.Fields.Assignee.DisplayName
+		}
+		fmt.Printf("%-10s %-10s %-16s %-20s %s\n", issue.Key, issue.Fields.Type.Name, issue.Fields.Status.Name, assigneeName, issue.Fields.Summary)
 	}
 
 	return nil
@@ -487,6 +590,7 @@ func addIssueToSprint(ctx context.Context) error {
 	// Get all boards to find the one that contains this issue's project
 	boards, _, err := client.Board.GetAllBoardsWithContext(ctx, &jira.BoardListOptions{
 		ProjectKeyOrID: issue.Fields.Project.Key,
+		BoardType:      "scrum",
 	})
 	if err != nil {
 		return fmt.Errorf("failed to get boards: %w", err)
@@ -520,6 +624,6 @@ func addIssueToSprint(ctx context.Context) error {
 		return fmt.Errorf("failed to add issue to sprint: %w", err)
 	}
 
-	fmt.Printf("Successfully added issue %s to sprint %s (ID: %d)\n", issueKey, sprints.Values[0].Name, sprintID)
+	fmt.Printf("Successfully added issue %s to sprint %q\n", issueKey, sprints.Values[0].Name)
 	return nil
 }

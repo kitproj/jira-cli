@@ -81,8 +81,8 @@ Usage:
   jira configure <host> - Configure JIRA host and token (reads token from stdin)
   jira create-issue <project> <issue-type> <title> <description> [assignee] - Create a new JIRA issue
   jira get-issue <issue-key> - Get details of the specified JIRA issue
-  jira list-issues - List issues assigned to the current user
-  jira update-issue-status <issue-key> <status> - Update the status of the specified JIRA issue
+  jira list-issues [-a=user] [-t=type] [-p=key] - List issues with optional filters
+  jira update-issue-status <issue-key> <status> [-f field=value]... - Update the status of the specified JIRA issue
   jira get-comments <issue-key> - Get comments of the specified JIRA issue
   jira add-comment <issue-key> <comment> - Add a comment to the specified JIRA issue
   jira attach-file <issue-key> <file-path> - Attach a file to the specified JIRA issue
@@ -100,13 +100,28 @@ jira get-issue PROJ-123
 
 **List your current issues:**
 ```bash
+# List issues assigned to you (default)
 jira list-issues
+
+# Filter by project
+jira list-issues -p=PROJ
+
+# Filter by issue type
+jira list-issues -t=Story
+
+# Filter by assignee (use 'me' for current user)
+jira list-issues -a=me
+jira list-issues -a=john.doe
+
+# Combine multiple filters
+jira list-issues -p=PROJ -t=Bug -a=me
+
 # Output:
-# Found 3 issue(s) in the last 14 days:
+# Found 3 issue(s):
 # 
-# PROJ-123        In Progress          Implement new feature
-# PROJ-124        To Do                Fix critical bug
-# PROJ-125        In Review            Update documentation
+# PROJ-123    Story      In Progress    John Doe    Implement new feature
+# PROJ-124    Bug        To Do          Jane Smith  Fix critical bug
+# PROJ-125    Task       In Review      John Doe    Update documentation
 ```
 
 **Create a new issue:**
@@ -126,8 +141,16 @@ jira create-issue PROJ Task "Update documentation" "Add API documentation for ne
 
 **Update issue status:**
 ```bash
+# Basic status update
 jira update-issue-status PROJ-123 "In Progress"
 # Note: Status names must match your Jira workflow (e.g., "To Do", "In Progress", "Done")
+
+# Update status with custom fields (e.g., effort estimate)
+jira update-issue-status PROJ-123 "In Progress" -f "Effort Estimate"=0
+
+# Multiple custom fields
+jira update-issue-status PROJ-123 "In Progress" -f "Effort Estimate"=0 -f "Story Points"=5
+# Note: Field names must match the exact field names in your Jira instance
 ```
 
 **Add a comment:**
@@ -190,11 +213,11 @@ Learn more about MCP: https://modelcontextprotocol.io
 
 The server exposes the following tools:
 - `get_issue` - Get details of a JIRA issue (e.g., status, summary, reporter, description)
-- `update_issue_status` - Update the status of a JIRA issue using transitions
+- `update_issue_status` - Update the status of a JIRA issue using transitions. Supports custom fields via the `-f` flag
 - `add_comment` - Add a comment to a JIRA issue
 - `get_comments` - Get all comments on a JIRA issue
 - `create_issue` - Create a new JIRA issue with specified project, issue type (Story/Bug/Task), title, description, and optional assignee
-- `list_issues` - List issues assigned to the current user that are unresolved and updated in the last 14 days
+- `list_issues` - List issues with optional filters (assignee, issue_type, project). Defaults to current user's unresolved issues updated in the last 14 days
 - `attach_file` - Attach a file to a JIRA issue
 - `assign_issue` - Assign a JIRA issue to a user
 - `add_issue_to_sprint` - Add a JIRA issue to the current active sprint

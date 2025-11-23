@@ -132,7 +132,16 @@ func runMCPServer(ctx context.Context) error {
 
 	// Add list-issues tool
 	listIssuesTool := mcp.NewTool("list_issues",
-		mcp.WithDescription("List issues assigned to the current user that are unresolved and updated in the last 14 days"),
+		mcp.WithDescription("List issues with optional filters (assignee, issue type, project)"),
+		mcp.WithString("assignee",
+			mcp.Description("Filter by assignee (default: current user, use 'me' for current user)"),
+		),
+		mcp.WithString("issue_type",
+			mcp.Description("Filter by issue type (e.g., Story, Bug, Task)"),
+		),
+		mcp.WithString("project",
+			mcp.Description("Filter by project key"),
+		),
 	)
 	s.AddTool(listIssuesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return listIssuesHandler(ctx, api, request)
@@ -197,8 +206,9 @@ func getIssueHandler(ctx context.Context, client *jira.Client, request mcp.CallT
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to get issue: %v", err)), nil
 	}
 
-	result := fmt.Sprintf("Key: %s\nStatus: %s\nSummary: %s\nReporter: %s (%s)\nDescription: %s",
+	result := fmt.Sprintf("Key: %s\nType: %s\nStatus: %s\nSummary: %s\nReporter: %s (%s)\nDescription: %s",
 		issue.Key,
+		issue.Fields.Type.Name,
 		issue.Fields.Status.Name,
 		issue.Fields.Summary,
 		issue.Fields.Reporter.DisplayName,
@@ -266,7 +276,12 @@ func updateIssueStatusHandler(ctx context.Context, client *jira.Client, host str
 	}
 
 	// Perform the transition
-	_, err = client.Issue.DoTransition(issueKey, targetTransition.ID)
+	payload := jira.CreateTransitionPayload{
+		Transition: jira.TransitionPayload{
+			ID: targetTransition.ID,
+		},
+	}
+	_, err = client.Issue.DoTransitionWithPayloadWithContext(ctx, issueKey, payload)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to update issue status: %v", err)), nil
 	}
@@ -372,7 +387,7 @@ func createIssueHandler(ctx context.Context, client *jira.Client, host string, r
 	}
 
 	// Create the issue
-	createdIssue, _, err := client.Issue.Create(issue)
+	createdIssue, _, err := client.Issue.CreateWithContext(ctx, issue)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to create issue: %v", err)), nil
 	}
@@ -381,30 +396,67 @@ func createIssueHandler(ctx context.Context, client *jira.Client, host string, r
 }
 
 func listIssuesHandler(ctx context.Context, client *jira.Client, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// JQL to find issues assigned to the current user, excluding closed issues, updated in last 14 days
-	jql := "assignee = currentUser() AND resolution = Unresolved AND updated >= -14d ORDER BY updated DESC"
+	// Get optional filters from request
+	assigneeFilter := request.GetString("assignee", "me")
+	issueTypeFilter := request.GetString("issue_type", "")
+	projectFilter := request.GetString("project", "")
+
+	// Build JQL query dynamically based on filters
+	var conditions []string
+
+	// Assignee filter (default to currentUser() if not specified)
+	if assigneeFilter == "me" || assigneeFilter == "" {
+		conditions = append(conditions, "assignee = currentUser()")
+	} else if assigneeFilter != "" {
+		conditions = append(conditions, fmt.Sprintf("assignee = %q", assigneeFilter))
+	}
+
+	// Project filter
+	if projectFilter != "" {
+		conditions = append(conditions, fmt.Sprintf("project = %q", projectFilter))
+	}
+
+	// Issue type filter
+	if issueTypeFilter != "" {
+		conditions = append(conditions, fmt.Sprintf("issuetype = %q", issueTypeFilter))
+	}
+
+	// Default: exclude resolved issues
+	conditions = append(conditions, "resolution = Unresolved")
+
+	// Default: updated in last 14 days if no specific filters
+	if projectFilter == "" && issueTypeFilter == "" {
+		conditions = append(conditions, "updated >= -14d")
+	}
+
+	// Build JQL query
+	jql := strings.Join(conditions, " AND ") + " ORDER BY updated DESC"
 
 	// Search for issues using JQL
 	issues, _, err := client.Issue.SearchWithContext(ctx, jql, &jira.SearchOptions{
 		MaxResults: 50,
-		Fields:     []string{"key", "summary", "status"},
+		Fields:     []string{"key", "issuetype", "summary", "status", "assignee", "project"},
 	})
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to search issues: %v", err)), nil
 	}
 
 	if len(issues) == 0 {
-		return mcp.NewToolResultText("No issues assigned to you in the last 14 days"), nil
+		return mcp.NewToolResultText("No issues found matching the specified criteria"), nil
 	}
 
-	result := fmt.Sprintf("Found %d issue(s) in the last 14 days", len(issues))
+	result := fmt.Sprintf("Found %d issue(s)", len(issues))
 	if len(issues) >= 50 {
 		result += " (showing first 50 only)"
 	}
 	result += ":\n\n"
 
 	for _, issue := range issues {
-		result += fmt.Sprintf("%-15s %-20s %s\n", issue.Key, issue.Fields.Status.Name, issue.Fields.Summary)
+		assigneeName := "-"
+		if issue.Fields.Assignee != nil {
+			assigneeName = issue.Fields.Assignee.DisplayName
+		}
+		result += fmt.Sprintf("%-10s %-10s %-16s %-20s %s\n", issue.Key, issue.Fields.Type.Name, issue.Fields.Status.Name, assigneeName, issue.Fields.Summary)
 	}
 
 	return mcp.NewToolResultText(result), nil
@@ -485,6 +537,7 @@ func addIssueToSprintHandler(ctx context.Context, client *jira.Client, request m
 	// Get all boards to find the one that contains this issue's project
 	boards, _, err := client.Board.GetAllBoardsWithContext(ctx, &jira.BoardListOptions{
 		ProjectKeyOrID: issue.Fields.Project.Key,
+		BoardType:      "scrum",
 	})
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to get boards: %v", err)), nil
@@ -518,5 +571,5 @@ func addIssueToSprintHandler(ctx context.Context, client *jira.Client, request m
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to add issue to sprint: %v", err)), nil
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Successfully added issue %s to sprint %s (ID: %d)", issueKey, sprints.Values[0].Name, sprintID)), nil
+	return mcp.NewToolResultText(fmt.Sprintf("Successfully added issue %s to sprint %q", issueKey, sprints.Values[0].Name)), nil
 }
