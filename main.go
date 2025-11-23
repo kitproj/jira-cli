@@ -318,7 +318,14 @@ func updateIssueStatus(ctx context.Context, statusName string, extra map[string]
 
 	fieldNameByID := make(map[string]string)
 	for fieldID, value := range editMetaInfo.Fields {
-		name := value.(map[string]any)["name"].(string)
+		valueMap, ok := value.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, ok := valueMap["name"].(string)
+		if !ok {
+			continue
+		}
 		fieldNameByID[fieldID] = name
 	}
 
